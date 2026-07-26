@@ -172,6 +172,10 @@ export function preprocessMarkdown(
   // 6. Prepend YAML frontmatter
   result = generateFrontmatter(cslStyle) + result;
 
+  // 7. Shift heading levels if needed (user uses ## as h1)
+  // Convert ## -> #, ### -> ##, etc.
+  result = result.replace(/^(\s*)##/gm, '$1#');
+
   return result.trim() + '\n';
 }
 
