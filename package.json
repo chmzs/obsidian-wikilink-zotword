@@ -1,0 +1,29 @@
+{
+  "name": "obsidian-wikilink-zotword",
+  "version": "0.1.0",
+  "description": "Export Obsidian wikilinks to Word with Zotero citations via Pandoc",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "obsidian",
+    "zotero",
+    "pandoc",
+    "citation",
+    "export",
+    "wikilink"
+  ],
+  "author": "chmzs",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0",
+    "obsidian": "^1.5.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.1"
+  }
+}

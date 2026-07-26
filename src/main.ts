@@ -1,0 +1,226 @@
+import { Notice, Plugin, TFile } from "obsidian";
+import { execSync } from "child_process";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+
+import {
+  ZoteroExportSettings,
+  DEFAULT_SETTINGS,
+  ZoteroExportSettingTab,
+} from "./settings";
+
+import {
+  extractCitations,
+  preprocessMarkdown,
+  buildPandocArgs,
+} from "./preprocessor";
+
+export default class ZoteroExportPlugin extends Plugin {
+  settings: ZoteroExportSettings = DEFAULT_SETTINGS;
+
+  async onload() {
+    await this.loadSettings();
+
+    this.addCommand({
+      id: "export-to-word",
+      name: "Export to Word (Zotero Citations)",
+      callback: () => this.exportCurrentNote(),
+    });
+
+    this.addSettingTab(new ZoteroExportSettingTab(this.app, this));
+    console.log("Zotero Citation Export plugin loaded");
+  }
+
+  onunload() {
+    console.log("Zotero Citation Export plugin unloaded");
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
+
+  async exportCurrentNote() {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) {
+      new Notice("❌ 没有打开的笔记文件");
+      return;
+    }
+
+    // Pre-flight checks
+    const pandocOk = this.checkPandoc();
+    if (!pandocOk) return;
+
+    const filterPath = this.findLuaFilter();
+    if (!filterPath) {
+      new Notice("❌ 找不到 Lua 过滤器\n请确认插件 filters/ 目录完整");
+      return;
+    }
+
+    try {
+      new Notice("⏳ 正在导出...");
+
+      // 1. Read and extract citations
+      const content = await this.app.vault.read(file);
+      const citations = extractCitations(content);
+      console.log(`Found ${citations.length} citations`);
+
+      citations.forEach(c => console.log(`  ${c.fullMatch} → @${c.citekey}`));
+
+      // 2. Preprocess markdown (BBT mode uses local construction, which now matches BBT config)
+      const preprocessed = preprocessMarkdown(content, this.settings.cslStyle, this.settings.exportMode);
+
+      // 4. Write temp files
+      const tmpDir = os.tmpdir();
+      const baseName = path.basename(file.path, ".md");
+      const tmpMd = path.join(tmpDir, `${baseName}_zotero_export.md`);
+      const tmpDocx = path.join(tmpDir, `${baseName}_export.docx`);
+
+      fs.writeFileSync(tmpMd, preprocessed, "utf-8");
+
+      // 5. Run Pandoc
+      const pandocArgs = buildPandocArgs(tmpMd, tmpDocx, filterPath, this.settings.cslStyle, this.settings.templatePath);
+      const cmd = `"${this.settings.pandocPath}" ${pandocArgs.map(a => `"${a}"`).join(" ")}`;
+      console.log("Running:", cmd);
+
+      try {
+        execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+      } catch (error) {
+        const stderr = error.stderr?.toString() || error.message;
+        console.error("Pandoc failed:", stderr);
+        new Notice(`❌ Pandoc 转换失败\n\n${this.summarizePandocError(stderr)}`);
+        this.cleanup(tmpMd, tmpDocx);
+        return;
+      }
+
+      // 6. Copy to output
+      const outputDir = this.settings.outputDir || file.parent?.path || (this.app.vault.adapter as any).basePath;
+      const outputPath = path.join(outputDir, `${baseName}.docx`);
+
+      try {
+        fs.copyFileSync(tmpDocx, outputPath);
+      } catch (error: any) {
+        console.error("Copy failed:", error.message);
+        if (error.code === "EPERM" || error.code === "EBUSY") {
+          new Notice(`❌ 无法写入文件，同名 Word 被占用，请关闭后重试\n${outputPath}`);
+        } else if (error.code === "ENOENT") {
+          new Notice(`❌ 输出目录不存在\n${outputDir}`);
+        } else {
+          new Notice(`❌ 写入文件失败: ${error.message}\n${outputPath}`);
+        }
+        this.cleanup(tmpMd, tmpDocx);
+        return;
+      }
+
+      // 7. Cleanup
+      this.cleanup(tmpMd, tmpDocx);
+
+      const msg = citations.length > 0
+        ? `✅ 导出成功（${citations.length} 条引用）\n${outputPath}`
+        : `✅ 导出成功（无引用）\n${outputPath}`;
+      new Notice(msg);
+
+      // Warn if some citekeys weren't found by BBT
+      if (citations.length > 0) {
+        this.checkBbtConnection();
+      }
+
+    } catch (error) {
+      console.error("Export failed:", error);
+      new Notice(`❌ 导出失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * Pre-flight check: verify Pandoc is accessible.
+   */
+  private checkPandoc(): boolean {
+    try {
+      execSync(`"${this.settings.pandocPath}" --version`, {
+        encoding: "utf-8",
+        timeout: 5000,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+      return true;
+    } catch {
+      new Notice(
+        `❌ 找不到 Pandoc\n\n` +
+        `当前路径: ${this.settings.pandocPath}\n\n` +
+        `请确认:\n` +
+        `1. 已安装 Pandoc (≥2.16.2)\n` +
+        `2. 已加入系统 PATH，或在设置中填写完整路径`
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Warn if BBT/Zotero is not reachable (non-blocking).
+   */
+  private checkBbtConnection() {
+    try {
+      execSync("curl -s --connect-timeout 3 http://127.0.0.1:23119/connector/ping", {
+        encoding: "utf-8",
+        timeout: 5000,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch {
+      new Notice(
+        "⚠️ Zotero 未运行或 BBT 不可达\n\n" +
+        "导出已完成，但引用可能无法在 Word 中刷新。\n" +
+        "请启动 Zotero 后在 Word 中点击 Zotero → Refresh。"
+      );
+    }
+  }
+
+  /**
+   * Summarize Pandoc error output for user-friendly display.
+   */
+  private summarizePandocError(stderr: string): string {
+    if (stderr.includes("Could not fetch")) {
+      return "zotero.lua 无法连接 BBT\n请确认 Zotero 正在运行且 BBT 已安装";
+    }
+    if (stderr.includes("not found")) {
+      const match = stderr.match(/@(\S+) not found/);
+      if (match) return `引用 @${match[1]} 在 Zotero 中不存在\n请检查 citation key 是否正确`;
+    }
+    if (stderr.includes("bad argument")) {
+      return "Lua 兼容性错误，请更新插件";
+    }
+    // Truncate long errors
+    const lines = stderr.split("\n").filter(l => l.trim());
+    return lines.slice(-3).join("\n");
+  }
+
+  /**
+   * Clean up temp files.
+   */
+  private cleanup(...files: string[]) {
+    for (const f of files) {
+      try { fs.unlinkSync(f); } catch {}
+    }
+  }
+
+  /**
+   * Find the appropriate Lua filter based on export mode.
+   */
+  private findLuaFilter(): string | undefined {
+    const pluginDir = (this.app.vault.adapter as any).basePath;
+    const isBbt = this.settings.exportMode === 'bbt';
+    const filterName = isBbt ? 'obsidian-zotero.lua' : 'zotero-lite.lua';
+
+    // Primary: plugin's filters/ directory
+    const primary = path.join(pluginDir, ".obsidian", "plugins", "wikilink-zotword", "filters", filterName);
+    if (fs.existsSync(primary)) return primary;
+
+    // Fallback: vault root
+    const fallback = path.join(pluginDir, "filters", filterName);
+    if (fs.existsSync(fallback)) return fallback;
+
+    return undefined;
+  }
+}

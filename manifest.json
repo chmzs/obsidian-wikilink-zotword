@@ -1,0 +1,9 @@
+{
+  "id": "wikilink-zotword",
+  "name": "Wikilink to Zotero Word",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Export Obsidian wikilinks to Word with Zotero citations via Pandoc",
+  "author": "chmzs",
+  "isDesktopOnly": true
+}
