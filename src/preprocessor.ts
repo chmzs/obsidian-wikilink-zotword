@@ -119,15 +119,11 @@ export function preprocessMarkdown(
   result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
 
   // 1. Convert image embeds to standard markdown FIRST (before frontmatter)
-  // ![[image.png]] -> ![](image.png)
-  // ![[image.png|200]] -> ![](image.png){ width=200 }  (size parameter)
-  // ![[image.png|题注文字]] -> ![题注文字](image.png){#fig:xxx}  (caption for crossref)
+  // Wikilink syntax: ![[image.png|param]]
   result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, param) => {
     if (!param) {
-      // No parameter: ![[image.png]]
       return '![](' + file + ')';
     }
-    // Check if parameter is a number (size) or text (caption)
     const isSize = /^\d+$/.test(param.trim());
     if (isSize) {
       return '![](' + file + '){ width=' + param.trim() + ' }';
@@ -139,30 +135,104 @@ export function preprocessMarkdown(
     return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
   });
 
-  // 1b. Convert table callouts to pandoc table with caption
-  // > [!table] 表题注文字
-  // > | col1 | col2 |
-  // > |------|------|
-  // > | A    | B    |
+  // Standard markdown syntax: ![alt|size](URL) or ![alt](URL)
+  // ![alt|200](image.png) → ![alt](image.png){ width=200 }
+  // ![alt](image.png) → ![alt](image.png){#fig:xxx}
+  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, alt, size, url) => {
+    return '![' + alt + '](' + url + '){ width=' + size + ' }';
+  });
+  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (match, alt, url) => {
+    // Only add fig label if alt text is non-empty and not already processed
+    if (!alt.trim()) return match;
+    // Generate fig label from URL filename
+    const figLabel = path.basename(url, path.extname(url))
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '');
+    return '![' + alt.trim() + '](' + url + '){#fig:' + figLabel + '}';
+  });
+
+  // 1b. Convert figure callouts to pandoc figure with caption + annotation
+  // > [!figure] 图 1 xxx
+  // > 注释文字
+  // >
+  // > ![](image.png)
   // →
-  // : 表题注文字 {#tbl:tbl-N}
-  // | col1 | col2 |
-  // |------|------|
-  // | A    | B    |
-  let tableCounter = 0;
+  // ![图 1 xxx](image.png){#fig:N}
+  //
+  // 注释文字
+  let figCounter = 0;
   result = result.replace(
-    /^>\s*\[!table\]\s*(.*)\n((?:^>\s?.*\n?)+)/gm,
-    (_match: string, caption: string, body: string) => {
-      tableCounter++;
-      const tblLabel = 'tbl:' + tableCounter;
-      // Remove > prefix from each line and trim
-      const tableLines = body.split('\n')
-        .map((line: string) => line.replace(/^>\s?/, ''))
-        .filter((line: string) => line.trim() !== '')
+    /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\))\s*$/gm,
+    (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
+      figCounter++;
+      const figLabel = 'fig:' + figCounter;
+      // Extract annotation text (lines starting with >)
+      const annotation = annotationBlock
+        .split('\n')
+        .map((line: string) => line.replace(/^>\s?/, '').trim())
+        .filter((line: string) => line !== '')
         .join('\n');
-      return ': ' + caption.trim() + ' {#' + tblLabel + '}\n\n' + tableLines;
+      // Parse image: ![alt](url)
+      const imgMatch = imageSyntax.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+      const imgUrl = imgMatch ? imgMatch[2] : imageSyntax;
+      let result = '![' + caption.trim() + '](' + imgUrl + '){#' + figLabel + '}';
+      if (annotation) {
+        result += '\n\n' + annotation;
+      }
+      return result;
     }
   );
+
+  // 1c. Convert table callouts to pandoc table with caption + annotation
+  // Process line by line to handle multi-line tables
+  let tableCounter = 0;
+  const lines = result.split('\n');
+  const processedLines: string[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    // Check if this line starts a table callout
+    const tableMatch = lines[i].match(/^>\s*\[!table\]\s*(.*)$/);
+    if (tableMatch) {
+      tableCounter++;
+      const tblLabel = 'tbl:' + tableCounter;
+      const caption = tableMatch[1].trim();
+      i++;
+
+      // Collect annotation lines (before empty line)
+      const annotationLines: string[] = [];
+      while (i < lines.length && lines[i].trim() !== '>' && !lines[i].match(/^>\s*\|/)) {
+        const lineContent = lines[i].replace(/^>\s?/, '').trim();
+        if (lineContent) annotationLines.push(lineContent);
+        i++;
+      }
+
+      // Skip empty > line
+      if (i < lines.length && lines[i].trim() === '>') {
+        i++;
+      }
+
+      // Collect table lines
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].match(/^>\s*\|/)) {
+        tableLines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+
+      // Output: caption → table → annotation
+      processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
+      processedLines.push('');
+      processedLines.push(...tableLines);
+      if (annotationLines.length > 0) {
+        processedLines.push('');
+        processedLines.push(...annotationLines);
+      }
+    } else {
+      processedLines.push(lines[i]);
+      i++;
+    }
+  }
+  result = processedLines.join('\n');
 
   // 2. Process parenthesized citation groups first (repeatedly until no more matches)
   // Match ( ... ) or （ ... ） that contain citation wikilinks

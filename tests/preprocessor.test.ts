@@ -131,14 +131,47 @@ describe('preprocessMarkdown', () => {
     expect(result).toContain('![题注文字](img2.png){#fig:img2}');
   });
 
-  it('converts table callout to pandoc table', () => {
-    const content = `> [!table] 不同代用指标的气候意义
+  it('converts standard markdown image with caption to fig crossref', () => {
+    const content = '![长江中下游花粉重建结果](D:/附件/fig1.png)';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![长江中下游花粉重建结果](D:/附件/fig1.png){#fig:fig1}');
+  });
+
+  it('converts standard markdown image with size parameter', () => {
+    const content = '![题注|200](image.png)';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![题注](image.png){ width=200 }');
+  });
+
+  it('does not add fig label to empty alt text', () => {
+    const content = '![](image.png)';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![](image.png)');
+    expect(result).not.toContain('{#fig:');
+  });
+
+  it('converts figure callout to pandoc figure with annotation', () => {
+    const content = `> [!figure] 图 1 长江中下游花粉重建结果
+> 该数据基于 12 个采样点。
+>
+> ![](D:/附件/fig1.png)`;
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![图 1 长江中下游花粉重建结果](D:/附件/fig1.png){#fig:1}');
+    expect(result).toContain('该数据基于 12 个采样点。');
+    expect(result).not.toContain('> [!figure]');
+  });
+
+  it('converts table callout to pandoc table with annotation', () => {
+    const content = `> [!table] 表 1 不同代用指标的气候意义
+> 数据来源：综合多篇文献。
+>
 > | 指标 | 信号 |
 > |------|------|
 > | 花粉 | 温度 |`;
     const result = preprocessMarkdown(content, undefined, 'bbt');
-    expect(result).toContain(': 不同代用指标的气候意义 {#tbl:1}');
+    expect(result).toContain(': 表 1 不同代用指标的气候意义 {#tbl:1}');
     expect(result).toContain('| 指标 | 信号 |');
+    expect(result).toContain('数据来源：综合多篇文献。');
     expect(result).not.toContain('> [!table]');
   });
 
