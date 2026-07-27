@@ -117,7 +117,10 @@ export default class ZoteroExportPlugin extends Plugin {
       }
 
       // 6. Copy to output
-      const outputDir = this.settings.outputDir || file.parent?.path || (this.app.vault.adapter as any).basePath;
+      const vaultBase = (this.app.vault.adapter as any).basePath;
+      const parentPath = file.parent?.path;
+      const outputDir = this.settings.outputDir
+        || (parentPath ? path.join(vaultBase, parentPath) : vaultBase);
       const outputPath = path.join(outputDir, `${baseName}.docx`);
 
       try {
