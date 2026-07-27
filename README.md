@@ -77,6 +77,19 @@ Obsidian 中写作，**必须包含 `KEY-XXXXXXXX` (8位大写字母数字)**：
 | **Word template** | (空=默认模板) | 自定义 .docx 模板路径（预设页眉页脚、样式） |
 | **Pandoc path** | `pandoc` | Pandoc 可执行文件路径（已在 PATH 可填 `pandoc`） |
 
+### 图表交叉引用 (pandoc-crossref)
+
+| 设置项 | 默认值 | 说明 |
+|--------|--------|------|
+| **Figure prefix** | `图` | 图前缀（如 `图`、`Fig.`） |
+| **Table prefix** | `表` | 表前缀（如 `表`、`Tab.`） |
+| **Equation prefix** | `式` | 公式前缀（如 `式`、`Eq.`） |
+| **Chapter delimiter** | `.` | 章节分隔符（如 `.`、`-`） |
+| **Auto section labels** | ✅ | 自动为章节生成标签 |
+| **pandoc-crossref path** | (空=Quarto 内置) | pandoc-crossref 可执行文件路径 |
+
+> Quarto 用户留空即可自动检测。独立安装 pandoc-crossref 的用户需填入完整路径（如 `D:/tools/pandoc-crossref.exe`）。
+
 ### 模式对比
 
 | 特性 | BBT 模式 | Lite 模式 |
@@ -142,7 +155,10 @@ Obsidian 中写作，**必须包含 `KEY-XXXXXXXX` (8位大写字母数字)**：
 ### Q7: 引用格式里的中文作者（如 `陈发虎`）citekey 生成正确吗？
 **A**: 正确。中文作者直接拼音不转小写，如 `陈发虎2023-4NX85H85`。
 
-### Q8: 如何批量导出多个笔记？
+### Q8: 如何使用图表交叉引用（pandoc-crossref）？
+**A**: 在插件设置中配置图表前缀（如 `图`、`表`、`式`），导出时使用 `@fig-xxx`、`@tbl-xxx`、`@eq-xxx` 语法引用图表。需安装 [pandoc-crossref](https://github.com/tomduck/pandoc-crossref)，Quarto 用户可留空自动检测。
+
+### Q9: 如何批量导出多个笔记？
 **A**: 当前版本暂不支持批量导出，计划在 v0.3 实现。
 
 ## 开发
@@ -203,12 +219,13 @@ author.toLowerCase() + year + '-' + itemKey
 - ✅ Obsidian 插件（命令面板导出 + 设置界面 + 导出路径提示）
 - ✅ 双模式：BBT / Lite
 - ✅ Word 模板支持
+- ✅ 图表交叉引用 (pandoc-crossref) 集成
+- ✅ Image embed 转换（`![[image.png]]` → `![](image.png)`）
 - ✅ dist/ 一键安装打包
 
 ## 未来计划
 
-### v0.2：模板与双语引文
-- Word 模板选择 UI
+### v0.2：双语引文
 - 中英文混合引文支持
 
 ### v0.3：批量导出

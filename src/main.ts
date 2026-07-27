@@ -83,7 +83,26 @@ export default class ZoteroExportPlugin extends Plugin {
       fs.writeFileSync(tmpMd, preprocessed, "utf-8");
 
       // 5. Run Pandoc
-      const pandocArgs = buildPandocArgs(tmpMd, tmpDocx, filterPath, this.settings.cslStyle, this.settings.templatePath);
+      // Resolve pandoc-crossref filter path
+      let crossrefFilterPath = this.settings.crossref.crossrefFilterPath;
+      if (!crossrefFilterPath) {
+        // Try to auto-detect Quarto's built-in pandoc-crossref
+        const quartoPandocDir = path.dirname(this.settings.pandocPath);
+        const candidate = path.join(quartoPandocDir, "pandoc-crossref.exe");
+        if (fs.existsSync(candidate)) {
+          crossrefFilterPath = candidate;
+        }
+      }
+
+      const pandocArgs = buildPandocArgs(
+        tmpMd,
+        tmpDocx,
+        filterPath,
+        this.settings.cslStyle,
+        this.settings.templatePath,
+        this.settings.crossref,
+        crossrefFilterPath
+      );
       const cmd = `"${this.settings.pandocPath}" ${pandocArgs.map(a => `"${a}"`).join(" ")}`;
       console.log("Running:", cmd);
 

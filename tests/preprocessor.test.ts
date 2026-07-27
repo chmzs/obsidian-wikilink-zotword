@@ -4,6 +4,7 @@ import {
   extractItemKey,
   extractCitations,
   preprocessMarkdown,
+  buildPandocArgs,
 } from '../src/preprocessor';
 
 describe('wikilinkToCitekey', () => {
@@ -71,13 +72,13 @@ describe('preprocessMarkdown', () => {
   });
 
   it('merges citations in parentheses', () => {
-    const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]; [2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
+    const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]; [[2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
     const result = preprocessMarkdown(content, undefined, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
   });
 
   it('handles Chinese parentheses', () => {
-    const content = '（[[2018_Zhang_TITLE_KEY-FLBB3YEH|A]；[[2021_Rao_TITLE_KEY-W2D6EPGU|B]）';
+    const content = '（[[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]；[[2021_Rao_TITLE_KEY-W2D6EPGU|B]]）';
     const result = preprocessMarkdown(content, undefined, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
   });
@@ -130,5 +131,101 @@ describe('preprocessMarkdown with BBT citekey map', () => {
     const map = { FLBB3YEH: 'custom-citekey' };
     const result = preprocessMarkdown(content, undefined, 'bbt', map);
     expect(result).toContain('[@custom-citekey]');
+  });
+});
+
+describe('preprocessMarkdown - image embed edge cases', () => {
+  it('converts image embed with Chinese path', () => {
+    const content = '![[附件/图片.png]]';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![](附件/图片.png)');
+  });
+
+  it('converts image embed with size', () => {
+    const content = '![[chart.png|400]]';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![](chart.png){ width=400 }');
+  });
+
+  it('does not confuse image embed with citation wikilink', () => {
+    const content = '![[image_KEY-ABCDEF12.png]] and [[2018_Zhang_TITLE_KEY-FLBB3YEH|Zhang]]';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![](image_KEY-ABCDEF12.png)');
+    expect(result).toContain('[@zhang2018-FLBB3YEH]');
+  });
+});
+
+describe('preprocessMarkdown - parenthesized citations edge cases', () => {
+  it('merges three citations in parentheses', () => {
+    const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]; [[2021_Rao_TITLE_KEY-W2D6EPGU|B]]; [[2023_Chen_TITLE_KEY-4NX85H85|C]])';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU; @chen2023-4NX85H85]');
+  });
+
+  it('handles mixed separators in parentheses', () => {
+    const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]、[[2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
+  });
+
+  it('preserves text around parenthesized citations', () => {
+    const content = 'As shown in ([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]; [[2021_Rao_TITLE_KEY-W2D6EPGU|B]]), the data suggests...';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('As shown in');
+    expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
+    expect(result).toContain('the data suggests');
+  });
+
+  it('handles multiple parenthesized groups', () => {
+    const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]) and ([[2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('[@zhang2018-FLBB3YEH]');
+    expect(result).toContain('[@rao2021-W2D6EPGU]');
+  });
+});
+
+describe('buildPandocArgs', () => {
+  it('builds basic args', () => {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua');
+    expect(args).toContain('--from');
+    expect(args).toContain('markdown');
+    expect(args).toContain('--to');
+    expect(args).toContain('docx');
+    expect(args).toContain('--lua-filter');
+    expect(args).toContain('filter.lua');
+    expect(args).toContain('-o');
+    expect(args).toContain('out.docx');
+  });
+
+  it('includes CSL style', () => {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', 'my-style');
+    expect(args).toContain('--metadata=zotero_csl-style:my-style');
+  });
+
+  it('includes crossref metadata', () => {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, undefined, {
+      figPrefix: '图',
+      tblPrefix: '表',
+      eqnPrefix: '式',
+      chapDelim: '.',
+      autoSectionLabels: true,
+    });
+    expect(args).toContain('--metadata=figPrefix:图');
+    expect(args).toContain('--metadata=tblPrefix:表');
+    expect(args).toContain('--metadata=eqnPrefix:式');
+    expect(args).toContain('--metadata=chapDelim:.');
+    expect(args).toContain('--metadata=autoSectionLabels:true');
+  });
+
+  it('includes crossref filter path', () => {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, undefined, undefined, '/tools/pandoc-crossref.exe');
+    expect(args).toContain('--filter');
+    expect(args).toContain('/tools/pandoc-crossref.exe');
+  });
+
+  it('includes reference-doc for template', () => {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, 'template.docx');
+    expect(args).toContain('--reference-doc');
+    expect(args).toContain('template.docx');
   });
 });

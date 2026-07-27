@@ -55,7 +55,7 @@ export function wikilinkToCitekey(filename: string): string {
   const year = parts[0];
   const author = parts[1].toLowerCase()
     .replace(/\s+/g, '')           // remove spaces
-    .replace(/[''']/g, '');        // remove all apostrophe variants: ' (U+0027) ' (U+2018) ' (U+2019)
+    .replace(/['‘’]/g, ''); // remove all apostrophe variants: ' (U+0027) ' (U+2018) ' (U+2019)
 
   const keyMatch = filename.match(/KEY-([A-Z0-9]{8})/);
   if (!keyMatch) return filename;
@@ -116,25 +116,38 @@ export function preprocessMarkdown(
   // 0. Remove existing YAML frontmatter (we'll add our own)
   result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
 
-  // 1. Process parenthesized citation groups first
-  // Match ( ... ) or （ ... ） that contain citation wikilinks
-  // All [[wikilink]] inside the same parentheses become one [@a; @b; @c] group
-  const parenRegex = /([（(])([^）)]*?\[\[[^\]]*?_KEY-[A-Z0-9]{8}[^\]]*?\][^）)]*?)([)）])/g;
-  result = result.replace(parenRegex, (_match: string, _open: string, inner: string, _close: string) => {
-    // Convert all [[wikilinks]] inside parentheses to [@citekey] and merge
-    let citekeys: string[] = [];
-    inner.replace(
-      /\[\[([^\]]*?_KEY-([A-Z0-9]{8}))\|([^\]]+?)\]\]/g,
-      (_m: string, filename: string) => {
-        citekeys.push(getCitekey(filename));
-        return '';
-      }
-    );
-    if (citekeys.length === 0) return _match; // No citations found
-    return '[@' + citekeys.join('; @') + ']';
+  // 1. Convert image embeds to standard markdown FIRST (before frontmatter)
+  // ![[image.png]] -> ![](image.png)
+  // ![[image.png|200]] -> ![](image.png){ width=200 }
+  result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, size) => {
+    if (size) {
+      return '![](' + file + '){ width=' + size + ' }';
+    }
+    return '![](' + file + ')';
   });
 
-  // 2. Convert remaining citation wikilinks outside parentheses
+  // 2. Process parenthesized citation groups first (repeatedly until no more matches)
+  // Match ( ... ) or （ ... ） that contain citation wikilinks
+  // All [[wikilink]] inside the same parentheses become one [@a; @b; @c] group
+  let prev = '';
+  while (prev !== result) {
+    prev = result;
+    // Simple approach: find all ( ... ) and （ ... ） pairs and process them
+    const parenRegex = /([（\(])([^）\)]*)([\)）])/g;
+    result = result.replace(parenRegex, (_match: string, _open: string, inner: string, _close: string) => {
+      // Find all wikilinks in the inner content
+      const wikilinkRegex = /\[\[([^\]]*?_KEY-([A-Z0-9]{8}))\|([^\]]+?)\]\]/g;
+      let citekeys: string[] = [];
+      let m;
+      while ((m = wikilinkRegex.exec(inner)) !== null) {
+        citekeys.push(getCitekey(m[1]));
+      }
+      if (citekeys.length === 0) return _match;
+      return '[@' + citekeys.join('; @') + ']';
+    });
+  }
+
+  // 3. Convert remaining citation wikilinks outside parentheses
   // These are standalone citations not inside any parentheses
   result = result.replace(
     /\[\[([^\]]*?_KEY-([A-Z0-9]{8}))\|([^\]]+?)\]\]/g,
@@ -143,21 +156,11 @@ export function preprocessMarkdown(
     }
   );
 
-  // 3. Convert regular wikilinks to plain text
+  // 4. Convert regular wikilinks to plain text
   // [[Page Name]] -> Page Name
   // [[Page Name|Display]] -> Display
   result = result.replace(/\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, page, display) => {
     return display || page;
-  });
-
-  // 4. Convert image embeds to standard markdown
-  // ![[image.png]] -> ![](image.png)
-  // ![[image.png|200]] -> ![](image.png){ width=200 }
-  result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, size) => {
-    if (size) {
-      return '![](' + file + '){ width=' + size + ' }';
-    }
-    return '![](' + file + ')';
   });
 
   // 5. Convert Obsidian callouts to blockquotes
@@ -187,7 +190,15 @@ export function buildPandocArgs(
   outputPath: string,
   luaFilterPath: string,
   cslStyle?: string,
-  templatePath?: string
+  templatePath?: string,
+  crossrefOptions?: {
+    figPrefix?: string;
+    tblPrefix?: string;
+    eqnPrefix?: string;
+    chapDelim?: string;
+    autoSectionLabels?: boolean;
+  },
+  crossrefFilterPath?: string  // pandoc-crossref 可执行文件路径
 ): string[] {
   const args = [
     inputPath,
@@ -206,6 +217,30 @@ export function buildPandocArgs(
   // Custom Word template
   if (templatePath) {
     args.push('--reference-doc', templatePath);
+  }
+
+  // Crossref options (pandoc-crossref filter)
+  if (crossrefOptions) {
+    if (crossrefOptions.figPrefix) {
+      args.push('--metadata=figPrefix:' + crossrefOptions.figPrefix);
+    }
+    if (crossrefOptions.tblPrefix) {
+      args.push('--metadata=tblPrefix:' + crossrefOptions.tblPrefix);
+    }
+    if (crossrefOptions.eqnPrefix) {
+      args.push('--metadata=eqnPrefix:' + crossrefOptions.eqnPrefix);
+    }
+    if (crossrefOptions.chapDelim) {
+      args.push('--metadata=chapDelim:' + crossrefOptions.chapDelim);
+    }
+    if (crossrefOptions.autoSectionLabels !== undefined) {
+      args.push('--metadata=autoSectionLabels:' + String(crossrefOptions.autoSectionLabels));
+    }
+  }
+
+  // pandoc-crossref filter
+  if (crossrefFilterPath) {
+    args.push('--filter', crossrefFilterPath);
   }
 
   args.push('-o', outputPath);

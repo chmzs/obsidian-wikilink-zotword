@@ -3,12 +3,22 @@ import type ZoteroExportPlugin from "./main";
 
 export type ExportMode = "bbt" | "lite";
 
+export interface CrossrefOptions {
+  figPrefix: string;
+  tblPrefix: string;
+  eqnPrefix: string;
+  chapDelim: string;
+  autoSectionLabels: boolean;
+  crossrefFilterPath: string;
+}
+
 export interface ZoteroExportSettings {
   pandocPath: string;
   cslStyle: string;
   outputDir: string;
   templatePath: string;
   exportMode: ExportMode;
+  crossref: CrossrefOptions;
 }
 
 export const DEFAULT_SETTINGS: ZoteroExportSettings = {
@@ -17,6 +27,14 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
   outputDir: "",
   templatePath: "",
   exportMode: "bbt",
+  crossref: {
+    figPrefix: "图",
+    tblPrefix: "表",
+    eqnPrefix: "式",
+    chapDelim: ".",
+    autoSectionLabels: true,
+    crossrefFilterPath: "",
+  },
 };
 
 export class ZoteroExportSettingTab extends PluginSettingTab {
@@ -51,7 +69,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .onChange(async (value: string) => {
             this.plugin.settings.exportMode = value as ExportMode;
             await this.plugin.saveSettings();
-            this.display(); // Refresh to show/hide mode-specific settings
+            this.display();
           })
       );
 
@@ -108,6 +126,86 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.pandocPath)
           .onChange(async (value) => {
             this.plugin.settings.pandocPath = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // --- Crossref Options ---
+    containerEl.createEl("h3", { text: "图表交叉引用 (pandoc-crossref)" });
+
+    new Setting(containerEl)
+      .setName("Figure prefix")
+      .setDesc("图前缀（如 '图'、'Fig.'）")
+      .addText((text) =>
+        text
+          .setPlaceholder("图")
+          .setValue(this.plugin.settings.crossref.figPrefix)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.figPrefix = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Table prefix")
+      .setDesc("表前缀（如 '表'、'Tab.'）")
+      .addText((text) =>
+        text
+          .setPlaceholder("表")
+          .setValue(this.plugin.settings.crossref.tblPrefix)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.tblPrefix = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Equation prefix")
+      .setDesc("公式前缀（如 '式'、'Eq.'）")
+      .addText((text) =>
+        text
+          .setPlaceholder("式")
+          .setValue(this.plugin.settings.crossref.eqnPrefix)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.eqnPrefix = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Chapter delimiter")
+      .setDesc("章节分隔符（如 '.'、'-'）")
+      .addText((text) =>
+        text
+          .setPlaceholder(".")
+          .setValue(this.plugin.settings.crossref.chapDelim)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.chapDelim = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Auto section labels")
+      .setDesc("自动为章节生成标签（用于交叉引用）")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.crossref.autoSectionLabels)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.autoSectionLabels = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("pandoc-crossref path")
+      .setDesc("pandoc-crossref 可执行文件路径（Quarto 用户留空自动检测；独立安装请填完整路径，如 D:/tools/pandoc-crossref.exe）")
+      .addText((text) =>
+        text
+          .setPlaceholder("(留空自动检测 Quarto 内置)")
+          .setValue(this.plugin.settings.crossref.crossrefFilterPath)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.crossrefFilterPath = value;
             await this.plugin.saveSettings();
           })
       );
