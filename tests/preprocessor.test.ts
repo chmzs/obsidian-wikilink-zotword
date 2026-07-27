@@ -118,6 +118,30 @@ describe('preprocessMarkdown', () => {
     expect(result).toContain('![](img.png){ width=200 }');
   });
 
+  it('converts image embed with caption to fig crossref', () => {
+    const content = '![[fig1.png|长江中下游花粉重建结果]]';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![长江中下游花粉重建结果](fig1.png){#fig:fig1}');
+  });
+
+  it('distinguishes caption from size parameter', () => {
+    const content = '![[img.png|200]] and ![[img2.png|题注文字]]';
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain('![](img.png){ width=200 }');
+    expect(result).toContain('![题注文字](img2.png){#fig:img2}');
+  });
+
+  it('converts table callout to pandoc table', () => {
+    const content = `> [!table] 不同代用指标的气候意义
+> | 指标 | 信号 |
+> |------|------|
+> | 花粉 | 温度 |`;
+    const result = preprocessMarkdown(content, undefined, 'bbt');
+    expect(result).toContain(': 不同代用指标的气候意义 {#tbl:1}');
+    expect(result).toContain('| 指标 | 信号 |');
+    expect(result).not.toContain('> [!table]');
+  });
+
   it('converts callouts to blockquotes', () => {
     const content = '> [!note] This is a note';
     const result = preprocessMarkdown(content, undefined, 'bbt');

@@ -3,6 +3,8 @@
  * for use with BBT's zotero.lua filter.
  */
 
+import * as path from 'path';
+
 export interface CitationInfo {
   key: string;        // Zotero item key (e.g., "FLBB3YEH")
   alias: string;      // Display text (e.g., "Zhang et al., 2018, ESR")
@@ -118,13 +120,49 @@ export function preprocessMarkdown(
 
   // 1. Convert image embeds to standard markdown FIRST (before frontmatter)
   // ![[image.png]] -> ![](image.png)
-  // ![[image.png|200]] -> ![](image.png){ width=200 }
-  result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, size) => {
-    if (size) {
-      return '![](' + file + '){ width=' + size + ' }';
+  // ![[image.png|200]] -> ![](image.png){ width=200 }  (size parameter)
+  // ![[image.png|题注文字]] -> ![题注文字](image.png){#fig:xxx}  (caption for crossref)
+  result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, param) => {
+    if (!param) {
+      // No parameter: ![[image.png]]
+      return '![](' + file + ')';
     }
-    return '![](' + file + ')';
+    // Check if parameter is a number (size) or text (caption)
+    const isSize = /^\d+$/.test(param.trim());
+    if (isSize) {
+      return '![](' + file + '){ width=' + param.trim() + ' }';
+    }
+    // Caption: generate fig label from filename
+    const figLabel = path.basename(file, path.extname(file))
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '');
+    return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
   });
+
+  // 1b. Convert table callouts to pandoc table with caption
+  // > [!table] 表题注文字
+  // > | col1 | col2 |
+  // > |------|------|
+  // > | A    | B    |
+  // →
+  // : 表题注文字 {#tbl:tbl-N}
+  // | col1 | col2 |
+  // |------|------|
+  // | A    | B    |
+  let tableCounter = 0;
+  result = result.replace(
+    /^>\s*\[!table\]\s*(.*)\n((?:^>\s?.*\n?)+)/gm,
+    (_match: string, caption: string, body: string) => {
+      tableCounter++;
+      const tblLabel = 'tbl:' + tableCounter;
+      // Remove > prefix from each line and trim
+      const tableLines = body.split('\n')
+        .map((line: string) => line.replace(/^>\s?/, ''))
+        .filter((line: string) => line.trim() !== '')
+        .join('\n');
+      return ': ' + caption.trim() + ' {#' + tblLabel + '}\n\n' + tableLines;
+    }
+  );
 
   // 2. Process parenthesized citation groups first (repeatedly until no more matches)
   // Match ( ... ) or （ ... ） that contain citation wikilinks
