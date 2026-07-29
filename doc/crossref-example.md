@@ -7,7 +7,7 @@ crossref_lang: en
 > [!figure] Temperature reconstruction {#fig:temp_curve}
 > Source: compiled from multiple studies
 >
-> ![](https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Grasslands-menggu.jpg/500px-Grasslands-menggu.jpg)
+> ![](https://pics3.baidu.com/feed/bba1cd11728b4710eb8a2604c17946f2fe032393.jpeg@f_auto?token=770aecc5e3c465ca694147eb252cb847)
 
 As shown in @fig:temp_curve.
 

@@ -206,11 +206,11 @@ export default class ZoteroExportPlugin extends Plugin {
 
       // 2. Run markdown footnotes conversion
       const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
-      const yamlOverrides = parseCrossrefOverrides(content, this.settings);
-      const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
+      const yamlOverrides2 = parseCrossrefOverrides(content, this.settings);
+      const crossrefOptions2 = { ...this.settings.crossref, ...yamlOverrides2 };
       const result = await exportToMarkdownFootnotes(
         content, citations, this.settings.pandocPath, this.settings.cslStyleFile,
-        crossrefFilterPath, crossrefOptions
+        crossrefFilterPath, crossrefOptions2
       );
 
       if (citations.length > 0) {
