@@ -481,20 +481,6 @@ export async function exportToMarkdownFootnotes(
       '--bibliography', tmpJson.replace(/\\/g, '/'),
       '--csl', cslStyle,
     ];
-    // Add pandoc-crossref filter if available
-    if (crossrefFilterPath) {
-      pandocArgs3.push('--filter', crossrefFilterPath.replace(/\\/g, '/'));
-      if (crossrefOptions) {
-        if (crossrefOptions.figPrefix) pandocArgs3.push('--metadata=figPrefix:' + crossrefOptions.figPrefix);
-        if (crossrefOptions.tblPrefix) pandocArgs3.push('--metadata=tblPrefix:' + crossrefOptions.tblPrefix);
-        if (crossrefOptions.eqnPrefix) pandocArgs3.push('--metadata=eqnPrefix:' + crossrefOptions.eqnPrefix);
-        if (crossrefOptions.figureTitle) pandocArgs3.push('--metadata=figureTitle:' + crossrefOptions.figureTitle);
-        if (crossrefOptions.tableTitle) pandocArgs3.push('--metadata=tableTitle:' + crossrefOptions.tableTitle);
-        if (crossrefOptions.equationTitle) pandocArgs3.push('--metadata=equationTitle:' + crossrefOptions.equationTitle);
-        if (crossrefOptions.chapDelim) pandocArgs3.push('--metadata=chapDelim:' + crossrefOptions.chapDelim);
-        if (crossrefOptions.autoSectionLabels !== undefined) pandocArgs3.push('--metadata=autoSectionLabels:' + String(crossrefOptions.autoSectionLabels));
-      }
-    }
     const cmd3 = `"${pandocPath}" ${pandocArgs3.map(a => `"${a}"`).join(' ')}`;
     console.log('Running pandoc citeproc (citations):', cmd3);
     const citeOutput = execSync(cmd3, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
@@ -610,6 +596,38 @@ export async function exportToMarkdownFootnotes(
       const fullRef = bibEntries[ck] || ck;
       result += `[^${idx}]: ${fullRef}\n\n`;
     }
+
+    // Resolve cross-references (@fig:xxx, @tbl:xxx, @eq:xxx → prefix + number)
+    const xrefCounts: Record<string, number> = {};
+    const typeCounters: Record<string, { n: number }> = {
+      fig: { n: 0 }, tbl: { n: 0 }, eq: { n: 0 },
+    };
+    const xrefPattern = /\{#(fig|tbl|eq):([\w-]+)\}/g;
+    let xrefMatch;
+    while ((xrefMatch = xrefPattern.exec(result)) !== null) {
+      const type = xrefMatch[1];
+      const label = xrefMatch[2];
+      const fullKey = `${type}:${label}`;
+      if (!xrefCounts[fullKey]) {
+        xrefCounts[fullKey] = ++typeCounters[type].n;
+      }
+    }
+    const xrefPrefixes: Record<string, string> = {
+      fig: crossrefOptions?.figPrefix || 'Fig.',
+      tbl: crossrefOptions?.tblPrefix || 'Tab.',
+      eq: crossrefOptions?.eqnPrefix || 'Eq.',
+    };
+    result = result.replace(/@(fig|tbl|eq):([\w-]+)\b/g, (_match, type, label) => {
+      // Try exact match first, then try with underscores→dashes (preprocessor normalizes labels)
+      let key = `${type}:${label}`;
+      let num = xrefCounts[key];
+      if (!num && label.includes('_')) {
+        key = `${type}:${label.replace(/_/g, '-')}`;
+        num = xrefCounts[key];
+      }
+      if (num) return `${xrefPrefixes[type]} ${num}`;
+      return _match;
+    });
 
     return result.trim() + '\n';
 
