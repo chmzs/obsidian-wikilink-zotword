@@ -277,7 +277,10 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\))\s*$/gm,
     (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
       figCounter++;
-      const figLabel = 'fig:' + figCounter;
+      // Extract optional custom label {#fig:xxx} from caption
+      const labelMatch = caption.match(/\{#([a-zA-Z][\w-]*)\}$/);
+      const figLabel = labelMatch ? 'fig:' + labelMatch[1] : 'fig:' + figCounter;
+      const captionText = labelMatch ? caption.replace(/\s*\{#[\w-]*\}$/, '') : caption;
       const annotation = annotationBlock
         .split('\n')
         .map((line: string) => line.replace(/^>\s?/, '').trim())
@@ -285,7 +288,7 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
         .join('\n');
       const imgMatch = imageSyntax.match(/!\[([^\]]*)\]\(([^)]+)\)/);
       const imgUrl = imgMatch ? imgMatch[2] : imageSyntax;
-      let r = '![' + caption.trim() + '](' + imgUrl + '){#' + figLabel + '}';
+      let r = '![' + captionText.trim() + '](' + imgUrl + '){#' + figLabel + '}';
       if (annotation) {
         r += '\n\n' + annotation;
       }
@@ -303,8 +306,10 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     const tableMatch = lines[i].match(/^>\s*\[!table\]\s*(.*)$/);
     if (tableMatch) {
       tableCounter++;
-      const tblLabel = 'tbl:' + tableCounter;
-      const caption = tableMatch[1].trim();
+      const captionFull = tableMatch[1].trim();
+      const labelMatch = captionFull.match(/\{#([a-zA-Z][\w-]*)\}$/);
+      const tblLabel = labelMatch ? 'tbl:' + labelMatch[1] : 'tbl:' + tableCounter;
+      const caption = labelMatch ? captionFull.replace(/\s*\{#[\w-]*\}$/, '') : captionFull;
       i++;
 
       const annotationLines: string[] = [];
