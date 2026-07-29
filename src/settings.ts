@@ -21,8 +21,8 @@ export interface ZoteroExportSettings {
   outputDir: string;
   templatePath: string;
   exportMode: ExportMode;
-  crossref: CrossrefOptions;
-  // Markdown footnotes mode
+  crossref: CrossrefOptions;       // 中文版
+  crossrefEn: CrossrefOptions;     // 英文版
   cslStyleFile: string;
 }
 
@@ -43,7 +43,17 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
     autoSectionLabels: true,
     crossrefFilterPath: "",
   },
-  // Markdown footnotes mode
+  crossrefEn: {
+    figPrefix: "Fig.",
+    tblPrefix: "Tab.",
+    eqnPrefix: "Eq.",
+    figureTitle: "Figure",
+    tableTitle: "Table",
+    equationTitle: "Equation",
+    chapDelim: ".",
+    autoSectionLabels: true,
+    crossrefFilterPath: "",
+  },
   cslStyleFile: "apa",
 };
 

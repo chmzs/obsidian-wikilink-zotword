@@ -20,12 +20,25 @@ import {
 
 /**
  * Parse YAML frontmatter from markdown content and extract crossref overrides.
+ * Supports label_style: zh | en to switch between Chinese/English presets.
  */
-function parseCrossrefOverrides(content: string): Partial<CrossrefOptions> {
+function parseCrossrefOverrides(content: string, settings: ZoteroExportSettings): Partial<CrossrefOptions> {
   const overrides: Partial<CrossrefOptions> = {};
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return overrides;
 
+  // Check crossref_lang field for preset switching
+  const styleMatch = match[1].match(/^crossref_lang:\s*(zh|en)$/m);
+  if (styleMatch) {
+    const en = settings.crossrefEn;
+    if (en) {
+      for (const key of ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const) {
+        (overrides as any)[key] = (en as any)[key];
+      }
+    }
+  }
+
+  // Individual field overrides take priority over presets
   const crossrefKeys = ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const;
   for (const key of crossrefKeys) {
     const regex = new RegExp(`^${key}:\\s*(.+)$`, 'm');
@@ -102,7 +115,7 @@ export default class ZoteroExportPlugin extends Plugin {
       const preprocessed = preprocessMarkdown(content, this.settings.cslStyle, this.settings.exportMode);
 
       // 2b. Parse YAML frontmatter for per-document crossref overrides
-      const yamlOverrides = parseCrossrefOverrides(content);
+      const yamlOverrides = parseCrossrefOverrides(content, this.settings);
       const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
 
       // 4. Write temp files
@@ -206,7 +219,7 @@ export default class ZoteroExportPlugin extends Plugin {
 
       // 2. Run markdown footnotes conversion
       const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
-      const yamlOverrides = parseCrossrefOverrides(content);
+      const yamlOverrides = parseCrossrefOverrides(content, this.settings);
       const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
       const result = await exportToMarkdownFootnotes(
         content, citations, this.settings.pandocPath, this.settings.cslStyleFile,
