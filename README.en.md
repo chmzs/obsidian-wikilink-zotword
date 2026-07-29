@@ -198,6 +198,13 @@ CJK authors keep their original characters (no lowercase conversion), e.g., `zha
 Not yet — planned for v0.3.
 </details>
 
+## Future plans
+
+- **v0.3** — Bilingual citations (Chinese-English mixed)
+- **v0.4** — Multiple export formats (e.g., [obsidian-enhancing-export](https://github.com/mokeyish/obsidian-enhancing-export), [obsidian-better-export-pdf](https://github.com/l1xnan/obsidian-better-export-pdf))
+- **v0.5** — Cite-as-you-write: search Zotero from command palette → insert wikilink
+- **v0.6** — Batch export multiple notes + progress bar
+
 ## Development
 
 ```bash
