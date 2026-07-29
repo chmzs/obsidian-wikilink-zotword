@@ -54,7 +54,7 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 > [!note] 引用格式
 > 笔记中引用需要包含 Zotero 的 8 位 itemKey（Zotero One 自动生成）：
 > ```
-> [[2018_Zhang_Holocene climate var_KEY-FLBB3YEH|Zhang et al., 2018, ESR]]
+> [[2024_Smith_Advances in method_KEY-ABC12345|Smith et al., 2024, J. Sci.]]
 > ```
 > 管道符 `|` 后的别名仅在 Obsidian 中显示，导出时由 Zotero 替换为 CSL 格式。
 
@@ -63,24 +63,25 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 在 Obsidian 中使用 Callout 语法为图片和表格添加题注：
 
 ```markdown
-> [!figure] 图 1 中国北方温度重建
+> [!figure] 图 1 实验结果对比
 > 说明文字
 >
 > ![](图片路径)
 
 如 @fig:1 所示，……
 
-> [!table] 表 1 代用指标对比
+> [!table] 表 1 参数对比
 > 数据来源：综合文献
 >
-> | 指标 | 信号 |
+> | 参数 | 说明 |
 > |------|------|
-> | 花粉 | 温度 |
+> | A | 描述1 |
+> | B | 描述2 |
 
 如 @tbl:1 所示，……
 
-行内公式：$T = T_0 + \alpha \cdot \ln(t)$ {#eq:temp}
-如 @eq:temp 所示，……
+行内公式：$y = ax^2 + bx + c$ {#eq:quadratic}
+如 @eq:quadratic 所示，……
 ```
 
 > [!info] 交叉引用说明
@@ -101,12 +102,12 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 输出效果：
 
 ```markdown
-西北内陆地区 6 ka B.P. 后环境暖湿化（(Xiang et al., 2024)[^1]），
+近年来该领域研究取得重要进展（(Smith et al., 2024)[^1]），
 如 @fig:1 和 @tbl:1 所示。
 
 ## 参考文献
-[^1]: Xiang, L., et al. (2024). First Pediastrum--temperature transfer
-     function... *Quaternary Science Reviews*, 327, 108516.
+[^1]: Smith, J., et al. (2024). A study on...
+     *Journal of Example Studies*, 12(3), 456-478.
 ```
 
 - 正文：`作者 (年份)[^n]`（作者年份制）
@@ -188,7 +189,7 @@ BBT 模式需配置 `citekeyUnsafeChars`（见上文配置指南）并重新生�
 <details>
 <summary>中文作者 citekey 格式</summary>
 
-中文作者保持原样（不转小写），如 `陈发虎2023-4NX85H85`。
+中文作者保持原样（不转小写），如 `张三丰2023-4NX85H85`。
 </details>
 
 <details>
