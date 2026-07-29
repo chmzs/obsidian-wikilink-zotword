@@ -1765,6 +1765,11 @@ end
 function module.get(citekey)
   load_items()
 
+  -- No items were loaded (empty citekeys or fetch failed); skip lookup
+  if state.fetched == nil then
+    return nil
+  end
+
   if state.reported[citekey] ~= nil then
     return nil
   end
@@ -2030,7 +2035,10 @@ function Inlines_collect_citekeys(inlines)
   for k, v in pairs(inlines) do
     if v.t == 'Cite' then
       for _, item in pairs(v.citations) do
-        zotero.citekeys[item.id] = true
+        -- Skip cross-reference markers (@fig:, @tbl:, @eq:, @sec:)
+        if not item.id:match('^[a-z]+:') then
+          zotero.citekeys[item.id] = true
+        end
       end
     end
   end

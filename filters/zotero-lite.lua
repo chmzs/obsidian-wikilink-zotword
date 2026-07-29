@@ -1563,7 +1563,10 @@ function Inlines_collect_citekeys(inlines)
   for k, v in pairs(inlines) do
     if v.t == 'Cite' then
       for _, item in pairs(v.citations) do
+      -- Skip cross-reference markers (@fig:, @tbl:, @eq:, @sec:)
+      if not item.id:match('^[a-z]+:') then
         citekeys[item.id] = true
+      end
       end
     end
   end
