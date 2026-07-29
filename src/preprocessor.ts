@@ -607,9 +607,11 @@ export async function exportToMarkdownFootnotes(
     while ((xrefMatch = xrefPattern.exec(result)) !== null) {
       const type = xrefMatch[1];
       const label = xrefMatch[2];
-      const fullKey = `${type}:${label}`;
-      if (!xrefCounts[fullKey]) {
-        xrefCounts[fullKey] = ++typeCounters[type].n;
+      // Sub-figure: labels ending with -a, -b, -c share the base figure number
+      const subMatch = label.match(/^(.+)-([a-z])$/);
+      const baseKey = subMatch ? `${type}:${subMatch[1]}` : `${type}:${label}`;
+      if (!xrefCounts[baseKey]) {
+        xrefCounts[baseKey] = ++typeCounters[type].n;
       }
     }
     const xrefPrefixes: Record<string, string> = {
@@ -618,12 +620,23 @@ export async function exportToMarkdownFootnotes(
       eq: crossrefOptions?.eqnPrefix || 'Eq.',
     };
     result = result.replace(/@(fig|tbl|eq):([\w-]+)\b/g, (_match, type, label) => {
-      // Try exact match first, then try with underscores→dashes (preprocessor normalizes labels)
+      // Try exact match first, then with underscores→dashes
       let key = `${type}:${label}`;
       let num = xrefCounts[key];
       if (!num && label.includes('_')) {
         key = `${type}:${label.replace(/_/g, '-')}`;
         num = xrefCounts[key];
+      }
+      if (!num) {
+        // Try as sub-figure: base label + -a, -b, -c suffix
+        const subMatch = label.match(/^(.+)-([a-z])$/);
+        if (subMatch) {
+          const baseLabel = subMatch[1].replace(/_/g, '-');
+          const subLetter = subMatch[2];
+          key = `${type}:${baseLabel}`;
+          num = xrefCounts[key];
+          if (num) return `${xrefPrefixes[type]} ${num}${subLetter}`;
+        }
       }
       if (num) return `${xrefPrefixes[type]} ${num}`;
       return _match;
