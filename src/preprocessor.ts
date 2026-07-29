@@ -47,7 +47,7 @@ export function extractCitations(content: string): CitationInfo[] {
  * Convert a Zotero One filename to a BBT citation key.
  *
  * Filename format: {year}_{firstAuthor}_{title_KEY-{itemKey}}
- * BBT citekey:    {author}.toLowerCase() + {year} + '-' + {itemKey}
+ * BBT citekey:    author.lower() + year + '-' + item (8-char Zotero item key)
  *
  * Examples:
  *   "2018_Zhang_Holocene climate var_KEY-FLBB3YEH" -> "zhang2018-FLBB3YEH"
