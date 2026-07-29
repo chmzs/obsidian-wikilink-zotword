@@ -141,7 +141,11 @@ as shown in @fig:1 and @tbl:1.
 ### BBT mode (recommended)
 
 1. Zotero → Tools → Add-ons → Get Add-ons → Search "Better BibTeX" → Install → Restart Zotero
-2. **Configure special character filtering** (fixes apostrophe issues like `d'Alpoim`):
+2. **Configure citation key formula**:
+   - BBT default formula is `auth.lower + year`. Change it to `auth.lower + year + '-' + item` (i.e., `{auth.lower}{year}-{item}`)
+   - The `+ item` at the end is a BBT keyword that embeds the 8-character item key into each citekey
+   - Without the item key, Lite mode cannot match citations
+3. **Configure special character filtering** (fixes apostrophe issues like `d'Alpoim`):
    - Edit → Preferences → Advanced → Config Editor
    - Search `extensions.zotero.translators.better-bibtex.citekeyUnsafeChars`
    - Append right single quotation mark `'` (U+2019) to the value: `"#%'(),={}~'"`
