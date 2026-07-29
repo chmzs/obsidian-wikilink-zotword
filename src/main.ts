@@ -19,32 +19,19 @@ import {
 } from "./preprocessor";
 
 /**
- * Parse YAML frontmatter from markdown content and extract crossref overrides.
- * Supports label_style: zh | en to switch between Chinese/English presets.
+ * Parse YAML frontmatter for crossref_lang: zh/en to switch presets.
  */
 function parseCrossrefOverrides(content: string, settings: ZoteroExportSettings): Partial<CrossrefOptions> {
   const overrides: Partial<CrossrefOptions> = {};
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return overrides;
 
-  // Check crossref_lang field for preset switching
-  const styleMatch = match[1].match(/^crossref_lang:\s*(zh|en)$/m);
-  if (styleMatch) {
+  if (/^crossref_lang:\s*en$/m.test(match[1])) {
     const en = settings.crossrefEn;
     if (en) {
       for (const key of ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const) {
         (overrides as any)[key] = (en as any)[key];
       }
-    }
-  }
-
-  // Individual field overrides take priority over presets
-  const crossrefKeys = ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const;
-  for (const key of crossrefKeys) {
-    const regex = new RegExp(`^${key}:\\s*(.+)$`, 'm');
-    const m = match[1].match(regex);
-    if (m) {
-      (overrides as any)[key] = m[1].trim().replace(/^['"](.*)['"]$/, '$1');
     }
   }
   return overrides;
