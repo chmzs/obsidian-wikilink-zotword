@@ -616,12 +616,11 @@ export async function exportToMarkdownFootnotes(
       eq: crossrefOptions?.eqnPrefix || 'Eq.',
     };
     result = result.replace(/@(fig|tbl|eq):([\w-]+)\b/g, (_m, type, label) => {
-      // Try exact match, then underscore→dash, then sub-reference (base-a → base + suffix)
-      let norm = label.replace(/_/g, '-');
-      let key = `${type}:${norm}`;
+      // Try exact match, then as sub-figure (base-a → prefix Nsuffix)
+      let key = `${type}:${label}`;
       let num = xrefCounts[key];
       if (!num) {
-        const sub = norm.match(/^(.+)-([a-z])$/);
+        const sub = label.match(/^(.+)-([a-z])$/);
         if (sub) {
           key = `${type}:${sub[1]}`;
           num = xrefCounts[key];
