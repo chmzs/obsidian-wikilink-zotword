@@ -165,24 +165,6 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
 
     const xrefContainer = containerEl.createDiv({ cls: "crossref-settings" });
 
-    // Preset buttons
-    const presetRow = xrefContainer.createDiv({ attr: { style: "margin-bottom:16px;display:flex;gap:8px;" } });
-    presetRow.createEl("span", { text: "快速预设: ", attr: { style: "line-height:2;" } });
-    const zhBtn = presetRow.createEl("button", { text: "填入中文默认", attr: { style: "cursor:pointer;" } });
-    zhBtn.onclick = () => {
-      const def = DEFAULT_SETTINGS.crossref;
-      Object.assign(this.plugin.settings.crossref, def);
-      this.plugin.saveSettings();
-      this.display();
-    };
-    const enBtn = presetRow.createEl("button", { text: "填入英文默认", attr: { style: "cursor:pointer;" } });
-    enBtn.onclick = () => {
-      const def = DEFAULT_SETTINGS.crossrefEn;
-      Object.assign(this.plugin.settings.crossrefEn, def);
-      this.plugin.saveSettings();
-      this.display();
-    };
-
     const grid = xrefContainer.createDiv({ attr: { style: "display:grid;grid-template-columns:1fr 1fr;gap:0 24px;" } });
 
     // Column 1: Chinese
@@ -195,22 +177,8 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     enCol.createEl("h5", { text: "English" });
     this.xrefColumn(enCol, this.plugin.settings.crossrefEn, true);
 
-    // Shared settings below columns
+    // Shared setting below columns
     xrefContainer.createEl("hr");
-
-    new Setting(xrefContainer)
-      .setName("Chapter delimiter")
-      .setDesc("章节分隔符（如 '.'、'-'）")
-      .addText((text) =>
-        text
-          .setPlaceholder(".")
-          .setValue(this.plugin.settings.crossref.chapDelim)
-          .onChange(async (val) => {
-            this.plugin.settings.crossref.chapDelim = val;
-            this.plugin.settings.crossrefEn.chapDelim = val;
-            await this.plugin.saveSettings();
-          })
-      );
 
     new Setting(xrefContainer)
       .setName("Auto section labels")
@@ -243,12 +211,15 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     for (const [label, key, ph] of prefixFields) {
       new Setting(container)
         .setName(label)
-        .addText((text) =>
-          text.setPlaceholder(ph).setValue(String(target[key] || '')).onChange(async (val) => {
-            target[key] = val as any;
+        .addText((text) => {
+          const val = target[key];
+          text.setPlaceholder(ph);
+          if (val && val !== ph) text.setValue(val as string);
+          text.onChange(async (v) => {
+            target[key] = v as any;
             await this.plugin.saveSettings();
-          })
-        );
+          });
+        });
     }
 
     container.createEl("h6", { text: "— 题注标题 —", attr: { style: "margin:12px 0 4px;color:var(--text-muted);" } });
@@ -260,12 +231,30 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     for (const [label, key, ph] of titleFields) {
       new Setting(container)
         .setName(label)
-        .addText((text) =>
-          text.setPlaceholder(ph).setValue(String(target[key] || '')).onChange(async (val) => {
-            target[key] = val as any;
+        .addText((text) => {
+          const val = target[key];
+          text.setPlaceholder(ph);
+          if (val && val !== ph) text.setValue(val as string);
+          text.onChange(async (v) => {
+            target[key] = v as any;
             await this.plugin.saveSettings();
-          })
-        );
+          });
+        });
     }
+
+    // Chapter delimiter (per language)
+    new Setting(container)
+      .setName("Chapter delimiter")
+      .setDesc("章节分隔符")
+      .addText((text) => {
+        const ph = isEnglish ? '.' : '。';
+        text.setPlaceholder(ph);
+        const val = target.chapDelim;
+        if (val && val !== ph) text.setValue(val);
+        text.onChange(async (v) => {
+          target.chapDelim = v;
+          await this.plugin.saveSettings();
+        });
+      });
   }
 }
