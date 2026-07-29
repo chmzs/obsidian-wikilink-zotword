@@ -121,8 +121,8 @@ export default class ZoteroExportPlugin extends Plugin {
       // 4. Write temp files
       const tmpDir = os.tmpdir();
       const baseName = path.basename(file.path, ".md");
-      const tmpMd = path.join(tmpDir, `${baseName}_zotero_export.md`);
-      const tmpDocx = path.join(tmpDir, `${baseName}_export.docx`);
+      const tmpMd = path.join(tmpDir, `${baseName}_zotero_export.md`).replace(/\\/g, '/');
+      const tmpDocx = path.join(tmpDir, `${baseName}_export.docx`).replace(/\\/g, '/');
 
       fs.writeFileSync(tmpMd, preprocessed, "utf-8");
 
@@ -155,7 +155,7 @@ export default class ZoteroExportPlugin extends Plugin {
       const parentPath = file.parent?.path;
       const outputDir = this.settings.outputDir
         || (parentPath ? path.join(vaultBase, parentPath) : vaultBase);
-      const outputPath = path.join(outputDir, `${baseName}.docx`);
+      const outputPath = path.join(outputDir, `${baseName}.docx`).replace(/\\/g, '/');
 
       try {
         fs.copyFileSync(tmpDocx, outputPath);
@@ -232,7 +232,7 @@ export default class ZoteroExportPlugin extends Plugin {
       // 3. Write output file (same directory as source note)
       const parentPath = file.parent?.path || "";
       const baseName = path.basename(file.path, ".md");
-      const outputPath = path.join(parentPath, `${baseName}_footnotes.md`);
+      const outputPath = path.join(parentPath, `${baseName}_footnotes.md`).replace(/\\/g, '/');
 
       try {
         await this.app.vault.adapter.write(outputPath, result);
@@ -320,9 +320,6 @@ export default class ZoteroExportPlugin extends Plugin {
     return lines.slice(-3).join("\n");
   }
 
-  /**
-   * Clean up temp files.
-   */
   private cleanup(...files: string[]) {
     for (const f of files) {
       try { fs.unlinkSync(f); } catch {}

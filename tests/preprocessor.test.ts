@@ -244,7 +244,7 @@ describe('buildPandocArgs', () => {
   it('builds basic args', () => {
     const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua');
     expect(args).toContain('--from');
-    expect(args).toContain('markdown');
+    expect(args).toContain('markdown+yaml_metadata_block');
     expect(args).toContain('--to');
     expect(args).toContain('docx');
     expect(args).toContain('--lua-filter');

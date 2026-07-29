@@ -170,7 +170,7 @@ export function buildPandocArgs(
 ): string[] {
   const args = [
     inputPath,
-    '--from', 'markdown',
+    '--from', 'markdown+yaml_metadata_block',
     '--to', 'docx',
     '--lua-filter', luaFilterPath,
   ];
@@ -228,10 +228,14 @@ export function buildPandocArgs(
  * wikilink conversion, callout→blockquote, heading shift.
  */
 function applyMarkdownTransformations(content: string, skipWikilinkConversion = false): string {
-  let result = content;
+  // Normalize line endings first
+  let result = content.replace(/\r\n/g, '\n');
 
   // Remove existing YAML frontmatter
-  result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
+  result = result.replace(/^---\n[\s\S]*?\n---\n?/, '');
+
+  // Replace standalone --- (horizontal rules) with *** to avoid pandoc YAML parsing issues
+  result = result.replace(/^---\s*$/gm, '***');
 
   // 1. Convert image embeds to standard markdown FIRST (before frontmatter)
   // Wikilink syntax: ![[image.png|param]]
@@ -471,7 +475,7 @@ export async function exportToMarkdownFootnotes(
     // Use forward slashes for Windows compatibility with execSync
     const pandocArgs3 = [
       tmpCiteMd.replace(/\\/g, '/'),
-      '--from', 'markdown',
+      '--from', 'markdown+yaml_metadata_block',
       '--to', 'markdown',
       '--citeproc',
       '--bibliography', tmpJson.replace(/\\/g, '/'),
@@ -506,7 +510,7 @@ export async function exportToMarkdownFootnotes(
       fs.writeFileSync(singleTmp, singleMd, 'utf-8');
       const singleArgs = [
         singleTmp,
-        '--from', 'markdown',
+        '--from', 'markdown+yaml_metadata_block',
         '--to', 'markdown',
         '--citeproc',
         '--bibliography', tmpJson.replace(/\\/g, '/'),
@@ -592,7 +596,7 @@ export async function exportToMarkdownFootnotes(
     result = cleanMarkdown(result);
 
     // Remove existing frontmatter
-    result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
+    result = result.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 
     // Add footnotes section
     result += '\n\n## 参考文献\n\n';
