@@ -202,10 +202,11 @@ BBT 模式需配置 `citekeyUnsafeChars`（见上文配置指南）并重新生�
 
 ## 未来计划
 
-- **v0.3** — 批量导出多个笔记 + 导出进度条
-- **v0.4** — 双语引文（中英文混合）
+- **v0.3** — 双语引文（中英文混合）
+- **v0.4** — 多种导出格式支持（https://github.com/mokeyish/obsidian-enhancing-export、https://github.com/l1xnan/obsidian-better-export-pdf）
 - **v0.5** — 边写边引：命令面板搜索 Zotero 文献 → 插入 wikilink
-
+- **v0.6** — 批量导出多个笔记 + 导出进度条
+  
 ## 开发
 
 ```bash
