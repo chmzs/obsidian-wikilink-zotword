@@ -254,7 +254,7 @@ export default class ZoteroExportPlugin extends Plugin {
       // 4. Open in Obsidian
       const outputFile = this.app.vault.getAbstractFileByPath(outputPath);
       if (outputFile instanceof TFile) {
-        await this.app.workspace.getLeaf(false).openFile(outputFile);
+        await this.app.workspace.getLeaf('tab').openFile(outputFile);
       }
 
     } catch (error) {

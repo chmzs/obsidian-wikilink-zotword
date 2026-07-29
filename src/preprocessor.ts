@@ -617,6 +617,16 @@ export async function exportToMarkdownFootnotes(
     // Clean other wikilinks
     result = cleanMarkdown(result);
 
+    // Extract figure/table captions from alt text to visible lines
+    // Figures: caption after image; Tables: caption before table
+    result = result.replace(/!\[([^\]]*?)\]\(([^)]+)\)\{#(fig|tbl):([\w-]+)\}/g,
+      (_m, caption, url, type, label) => {
+        const line = `**${caption}**`;
+        if (type === 'fig') return `![${caption}](${url}){#${type}:${label}}\n\n${line}`;
+        return `${line}\n\n![${caption}](${url}){#${type}:${label}}`;
+      }
+    );
+
     // Remove existing frontmatter
     result = result.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
 
