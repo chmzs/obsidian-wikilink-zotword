@@ -136,7 +136,7 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 | Figure prefix | `图` | 图前缀 |
 | Table prefix | `表` | 表前缀 |
 | Equation prefix | `式` | 公式前缀 |
-| pandoc-crossref path | （空=Quarto 内置） | 留空自动检测 |
+| pandoc-crossref path | （空=不使用） | pandoc-crossref 可执行文件路径（如 `D:/tools/pandoc-crossref.exe`），需自行安装 |
 
 ## 用户配置指南
 

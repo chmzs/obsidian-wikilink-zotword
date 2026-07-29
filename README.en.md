@@ -134,7 +134,7 @@ as shown in @fig:1 and @tbl:1.
 | Figure prefix | `Fig.` | Figure label prefix |
 | Table prefix | `Tab.` | Table label prefix |
 | Equation prefix | `Eq.` | Equation label prefix |
-| pandoc-crossref path | (empty = Quarto built-in) | Auto-detected for Quarto users |
+| pandoc-crossref path | (empty = disabled) | Absolute path to pandoc-crossref (e.g., `D:/tools/pandoc-crossref.exe`), must be installed separately |
 
 ## Setup guide
 

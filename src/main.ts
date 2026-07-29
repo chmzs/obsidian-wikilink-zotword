@@ -90,16 +90,7 @@ export default class ZoteroExportPlugin extends Plugin {
       fs.writeFileSync(tmpMd, preprocessed, "utf-8");
 
       // 5. Run Pandoc
-      // Resolve pandoc-crossref filter path
-      let crossrefFilterPath = this.settings.crossref.crossrefFilterPath;
-      if (!crossrefFilterPath) {
-        // Try to auto-detect Quarto's built-in pandoc-crossref
-        const quartoPandocDir = path.dirname(this.settings.pandocPath);
-        const candidate = path.join(quartoPandocDir, "pandoc-crossref.exe");
-        if (fs.existsSync(candidate)) {
-          crossrefFilterPath = candidate;
-        }
-      }
+      const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
 
       const pandocArgs = buildPandocArgs(
         tmpMd,
@@ -190,15 +181,7 @@ export default class ZoteroExportPlugin extends Plugin {
       }
 
       // 2. Run markdown footnotes conversion
-      // Resolve pandoc-crossref filter path
-      let crossrefFilterPath = this.settings.crossref.crossrefFilterPath;
-      if (!crossrefFilterPath) {
-        const quartoPandocDir = path.dirname(this.settings.pandocPath);
-        const candidate = path.join(quartoPandocDir, "pandoc-crossref.exe");
-        if (fs.existsSync(candidate)) {
-          crossrefFilterPath = candidate;
-        }
-      }
+      const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
       const result = await exportToMarkdownFootnotes(
         content, citations, this.settings.pandocPath, this.settings.cslStyleFile,
         crossrefFilterPath, this.settings.crossref
