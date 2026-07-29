@@ -602,7 +602,7 @@ export async function exportToMarkdownFootnotes(
     const typeCounters: Record<string, { n: number }> = {
       fig: { n: 0 }, tbl: { n: 0 }, eq: { n: 0 },
     };
-    const xrefLabelPat = /\{#(fig|tbl|eq):([\w-]+)\}/g;
+    const xrefLabelPat = /\{#(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\}/g;
     let m;
     while ((m = xrefLabelPat.exec(result)) !== null) {
       const key = `${m[1]}:${m[2]}`;
@@ -615,7 +615,7 @@ export async function exportToMarkdownFootnotes(
       tbl: crossrefOptions?.tblPrefix || 'Tab.',
       eq: crossrefOptions?.eqnPrefix || 'Eq.',
     };
-    result = result.replace(/@(fig|tbl|eq):([\w-]+)\b/g, (_m, type, label) => {
+    result = result.replace(/@(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\b/g, (_m, type, label) => {
       // Try exact match, then as sub-figure (base-a → prefix Nsuffix)
       let key = `${type}:${label}`;
       let num = xrefCounts[key];
