@@ -19,6 +19,8 @@ export interface ZoteroExportSettings {
   templatePath: string;
   exportMode: ExportMode;
   crossref: CrossrefOptions;
+  // Markdown footnotes mode
+  cslStyleFile: string;
 }
 
 export const DEFAULT_SETTINGS: ZoteroExportSettings = {
@@ -35,6 +37,8 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
     autoSectionLabels: true,
     crossrefFilterPath: "",
   },
+  // Markdown footnotes mode
+  cslStyleFile: "apa",
 };
 
 export class ZoteroExportSettingTab extends PluginSettingTab {
@@ -87,6 +91,20 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
             })
         );
     }
+
+    // CSL style file for markdown-footnotes mode
+    new Setting(containerEl)
+      .setName("CSL style file (Markdown Footnotes)")
+      .setDesc("CSL 样式文件路径（如 apa.csl、chicago-author-date.csl 或完整 URL）。用于 Markdown 脚注导出模式。")
+      .addText((text) =>
+        text
+          .setPlaceholder("apa.csl 或完整路径/URL")
+          .setValue(this.plugin.settings.cslStyleFile)
+          .onChange(async (value) => {
+            this.plugin.settings.cslStyleFile = value;
+            await this.plugin.saveSettings();
+          })
+      );
 
     new Setting(containerEl)
       .setName("Output directory")

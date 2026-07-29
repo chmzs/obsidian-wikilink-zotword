@@ -14,6 +14,7 @@ import {
   extractCitations,
   preprocessMarkdown,
   buildPandocArgs,
+  exportToMarkdownFootnotes,
 } from "./preprocessor";
 
 export default class ZoteroExportPlugin extends Plugin {
@@ -26,6 +27,12 @@ export default class ZoteroExportPlugin extends Plugin {
       id: "export-to-word",
       name: "Export to Word (Zotero Citations)",
       callback: () => this.exportCurrentNote(),
+    });
+
+    this.addCommand({
+      id: "export-to-markdown-footnotes",
+      name: "Export to Markdown (Obsidian Footnotes + Zotero)",
+      callback: () => this.exportToMarkdownFootnotes(),
     });
 
     this.addSettingTab(new ZoteroExportSettingTab(this.app, this));
@@ -157,6 +164,80 @@ export default class ZoteroExportPlugin extends Plugin {
     }
   }
 
+  async exportToMarkdownFootnotes() {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) {
+      new Notice("❌ 没有打开的笔记文件");
+      return;
+    }
+
+    // Pre-flight checks
+    const pandocOk = this.checkPandoc();
+    if (!pandocOk) return;
+
+    try {
+      new Notice("⏳ 正在导出 Markdown 脚注格式...");
+
+      // 1. Read and extract citations
+      const content = await this.app.vault.read(file);
+      const citations = extractCitations(content);
+      console.log(`Found ${citations.length} citations`);
+
+      citations.forEach(c => console.log(`  ${c.fullMatch} → @${c.citekey}`));
+
+      if (citations.length > 0) {
+        new Notice("📡 正在连接 Zotero 获取文献元数据...");
+      }
+
+      // 2. Run markdown footnotes conversion
+      // Resolve pandoc-crossref filter path
+      let crossrefFilterPath = this.settings.crossref.crossrefFilterPath;
+      if (!crossrefFilterPath) {
+        const quartoPandocDir = path.dirname(this.settings.pandocPath);
+        const candidate = path.join(quartoPandocDir, "pandoc-crossref.exe");
+        if (fs.existsSync(candidate)) {
+          crossrefFilterPath = candidate;
+        }
+      }
+      const result = await exportToMarkdownFootnotes(
+        content, citations, this.settings.pandocPath, this.settings.cslStyleFile,
+        crossrefFilterPath, this.settings.crossref
+      );
+
+      if (citations.length > 0) {
+        new Notice("📝 正在格式化引文与参考文献...");
+      }
+
+      // 3. Write output file (same directory as source note)
+      const parentPath = file.parent?.path || "";
+      const baseName = path.basename(file.path, ".md");
+      const outputPath = path.join(parentPath, `${baseName}_footnotes.md`);
+
+      try {
+        await this.app.vault.adapter.write(outputPath, result);
+      } catch (error: any) {
+        console.error("Write failed:", error.message);
+        new Notice(`❌ 写入文件失败: ${error.message}\n${outputPath}`);
+        return;
+      }
+
+      const msg = citations.length > 0
+        ? `✅ 导出成功（${citations.length} 条引用）\n${outputPath}`
+        : `✅ 导出成功（无引用）\n${outputPath}`;
+      new Notice(msg);
+
+      // 4. Open in Obsidian
+      const outputFile = this.app.vault.getAbstractFileByPath(outputPath);
+      if (outputFile instanceof TFile) {
+        await this.app.workspace.getLeaf(false).openFile(outputFile);
+      }
+
+    } catch (error) {
+      console.error("Export failed:", error);
+      new Notice(`❌ 导出失败: ${error.message}`);
+    }
+  }
+
   /**
    * Pre-flight check: verify Pandoc is accessible.
    */
@@ -233,7 +314,7 @@ export default class ZoteroExportPlugin extends Plugin {
   private findLuaFilter(): string | undefined {
     const pluginDir = (this.app.vault.adapter as any).basePath;
     const isBbt = this.settings.exportMode === 'bbt';
-    const filterName = isBbt ? 'obsidian-zotero.lua' : 'zotero-lite.lua';
+    const filterName = isBbt ? 'zotero-bbt.lua' : 'zotero-lite.lua';
 
     // Primary: plugin's filters/ directory
     const primary = path.join(pluginDir, ".obsidian", "plugins", "wikilink-zotword", "filters", filterName);

@@ -4,6 +4,9 @@
  */
 
 import * as path from 'path';
+import { execSync } from "child_process";
+import * as fs from "fs";
+import * as os from "os";
 
 export interface CitationInfo {
   key: string;        // Zotero item key (e.g., "FLBB3YEH")
@@ -98,145 +101,21 @@ export function preprocessMarkdown(
   mode: 'bbt' | 'lite' = 'bbt',
   bbtCitekeyMap?: Record<string, string>
 ): string {
-  // Choose citekey strategy based on mode
   const getCitekey = (filename: string): string => {
     if (mode === 'lite') {
       return extractItemKey(filename);
     }
-    // BBT mode
     if (bbtCitekeyMap) {
       const itemKey = extractItemKey(filename);
       const mapped = bbtCitekeyMap[itemKey];
       if (mapped) return mapped;
     }
-    // Fallback: local construction
     return wikilinkToCitekey(filename);
   };
 
-  let result = content;
+  let result = applyMarkdownTransformations(content, true);
 
-  // 0. Remove existing YAML frontmatter (we'll add our own)
-  result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
-
-  // 1. Convert image embeds to standard markdown FIRST (before frontmatter)
-  // Wikilink syntax: ![[image.png|param]]
-  result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, param) => {
-    if (!param) {
-      return '![](' + file + ')';
-    }
-    const isSize = /^\d+$/.test(param.trim());
-    if (isSize) {
-      return '![](' + file + '){ width=' + param.trim() + ' }';
-    }
-    // Caption: generate fig label from filename
-    const figLabel = path.basename(file, path.extname(file))
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '');
-    return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
-  });
-
-  // Standard markdown syntax: ![alt|size](URL) or ![alt](URL)
-  // ![alt|200](image.png) → ![alt](image.png){ width=200 }
-  // ![alt](image.png) → ![alt](image.png){#fig:xxx}
-  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, alt, size, url) => {
-    return '![' + alt + '](' + url + '){ width=' + size + ' }';
-  });
-  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (match, alt, url) => {
-    // Only add fig label if alt text is non-empty and not already processed
-    if (!alt.trim()) return match;
-    // Generate fig label from URL filename
-    const figLabel = path.basename(url, path.extname(url))
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '');
-    return '![' + alt.trim() + '](' + url + '){#fig:' + figLabel + '}';
-  });
-
-  // 1b. Convert figure callouts to pandoc figure with caption + annotation
-  // > [!figure] 图 1 xxx
-  // > 注释文字
-  // >
-  // > ![](image.png)
-  // →
-  // ![图 1 xxx](image.png){#fig:N}
-  //
-  // 注释文字
-  let figCounter = 0;
-  result = result.replace(
-    /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\))\s*$/gm,
-    (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
-      figCounter++;
-      const figLabel = 'fig:' + figCounter;
-      // Extract annotation text (lines starting with >)
-      const annotation = annotationBlock
-        .split('\n')
-        .map((line: string) => line.replace(/^>\s?/, '').trim())
-        .filter((line: string) => line !== '')
-        .join('\n');
-      // Parse image: ![alt](url)
-      const imgMatch = imageSyntax.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-      const imgUrl = imgMatch ? imgMatch[2] : imageSyntax;
-      let result = '![' + caption.trim() + '](' + imgUrl + '){#' + figLabel + '}';
-      if (annotation) {
-        result += '\n\n' + annotation;
-      }
-      return result;
-    }
-  );
-
-  // 1c. Convert table callouts to pandoc table with caption + annotation
-  // Process line by line to handle multi-line tables
-  let tableCounter = 0;
-  const lines = result.split('\n');
-  const processedLines: string[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    // Check if this line starts a table callout
-    const tableMatch = lines[i].match(/^>\s*\[!table\]\s*(.*)$/);
-    if (tableMatch) {
-      tableCounter++;
-      const tblLabel = 'tbl:' + tableCounter;
-      const caption = tableMatch[1].trim();
-      i++;
-
-      // Collect annotation lines (before empty line)
-      const annotationLines: string[] = [];
-      while (i < lines.length && lines[i].trim() !== '>' && !lines[i].match(/^>\s*\|/)) {
-        const lineContent = lines[i].replace(/^>\s?/, '').trim();
-        if (lineContent) annotationLines.push(lineContent);
-        i++;
-      }
-
-      // Skip empty > line
-      if (i < lines.length && lines[i].trim() === '>') {
-        i++;
-      }
-
-      // Collect table lines
-      const tableLines: string[] = [];
-      while (i < lines.length && lines[i].match(/^>\s*\|/)) {
-        tableLines.push(lines[i].replace(/^>\s?/, ''));
-        i++;
-      }
-
-      // Output: caption → table → annotation
-      processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
-      processedLines.push('');
-      processedLines.push(...tableLines);
-      if (annotationLines.length > 0) {
-        processedLines.push('');
-        processedLines.push(...annotationLines);
-      }
-    } else {
-      processedLines.push(lines[i]);
-      i++;
-    }
-  }
-  result = processedLines.join('\n');
-
-  // 2. Process parenthesized citation groups first (repeatedly until no more matches)
-  // Match ( ... ) or （ ... ） that contain citation wikilinks
-  // All [[wikilink]] inside the same parentheses become one [@a; @b; @c] group
+  // 2. Process parenthesized citation groups (repeatedly until no more matches)
   let prev = '';
   while (prev !== result) {
     prev = result;
@@ -264,28 +143,13 @@ export function preprocessMarkdown(
     }
   );
 
-  // 4. Convert regular wikilinks to plain text
-  // [[Page Name]] -> Page Name
-  // [[Page Name|Display]] -> Display
+  // 4. Convert remaining regular wikilinks to plain text (citations already handled)
   result = result.replace(/\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, page, display) => {
     return display || page;
   });
 
-  // 5. Convert Obsidian callouts to blockquotes
-  result = result.replace(
-    /^>\s*\[!(\w+)\]\s*(.*)$/gm,
-    (match, type, title) => {
-      const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-      return '> **' + capitalizedType + '**: ' + title;
-    }
-  );
-
-  // 6. Prepend YAML frontmatter
+  // 5. Prepend YAML frontmatter
   result = generateFrontmatter(cslStyle) + result;
-
-  // 7. Shift heading levels if needed (user uses ## as h1)
-  // Convert ## -> #, ### -> ##, etc.
-  result = result.replace(/^(\s*)##/gm, '$1#');
 
   return result.trim() + '\n';
 }
@@ -354,4 +218,395 @@ export function buildPandocArgs(
   args.push('-o', outputPath);
 
   return args;
+}
+
+/**
+ * Shared markdown transformations used by both preprocessMarkdown and cleanMarkdown.
+ * Handles: YAML frontmatter removal, image embeds, figure/table callouts,
+ * wikilink conversion, callout→blockquote, heading shift.
+ */
+function applyMarkdownTransformations(content: string, skipWikilinkConversion = false): string {
+  let result = content;
+
+  // Remove existing YAML frontmatter
+  result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+  // 1. Convert image embeds to standard markdown FIRST (before frontmatter)
+  // Wikilink syntax: ![[image.png|param]]
+  result = result.replace(/!\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, file, param) => {
+    if (!param) {
+      return '![](' + file + ')';
+    }
+    const isSize = /^\d+$/.test(param.trim());
+    if (isSize) {
+      return '![](' + file + '){ width=' + param.trim() + ' }';
+    }
+    const figLabel = path.basename(file, path.extname(file))
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '');
+    return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
+  });
+
+  // Standard markdown syntax: ![alt|size](URL) or ![alt](URL)
+  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, alt, size, url) => {
+    return '![' + alt + '](' + url + '){ width=' + size + ' }';
+  });
+  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (match, alt, url) => {
+    if (!alt.trim()) return match;
+    const figLabel = path.basename(url, path.extname(url))
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '');
+    return '![' + alt.trim() + '](' + url + '){#fig:' + figLabel + '}';
+  });
+
+  // 1b. Convert figure callouts to pandoc figure with caption + annotation
+  let figCounter = 0;
+  result = result.replace(
+    /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\))\s*$/gm,
+    (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
+      figCounter++;
+      const figLabel = 'fig:' + figCounter;
+      const annotation = annotationBlock
+        .split('\n')
+        .map((line: string) => line.replace(/^>\s?/, '').trim())
+        .filter((line: string) => line !== '')
+        .join('\n');
+      const imgMatch = imageSyntax.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+      const imgUrl = imgMatch ? imgMatch[2] : imageSyntax;
+      let r = '![' + caption.trim() + '](' + imgUrl + '){#' + figLabel + '}';
+      if (annotation) {
+        r += '\n\n' + annotation;
+      }
+      return r;
+    }
+  );
+
+  // 1c. Convert table callouts to pandoc table with caption + annotation
+  let tableCounter = 0;
+  const lines = result.split('\n');
+  const processedLines: string[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const tableMatch = lines[i].match(/^>\s*\[!table\]\s*(.*)$/);
+    if (tableMatch) {
+      tableCounter++;
+      const tblLabel = 'tbl:' + tableCounter;
+      const caption = tableMatch[1].trim();
+      i++;
+
+      const annotationLines: string[] = [];
+      while (i < lines.length && lines[i].trim() !== '>' && !lines[i].match(/^>\s*\|/)) {
+        const lineContent = lines[i].replace(/^>\s?/, '').trim();
+        if (lineContent) annotationLines.push(lineContent);
+        i++;
+      }
+
+      if (i < lines.length && lines[i].trim() === '>') {
+        i++;
+      }
+
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].match(/^>\s*\|/)) {
+        tableLines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+
+      processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
+      processedLines.push('');
+      processedLines.push(...tableLines);
+      if (annotationLines.length > 0) {
+        processedLines.push('');
+        processedLines.push(...annotationLines);
+      }
+    } else {
+      processedLines.push(lines[i]);
+      i++;
+    }
+  }
+  result = processedLines.join('\n');
+
+  // 2. Convert regular wikilinks to plain text
+  if (!skipWikilinkConversion) {
+    result = result.replace(/\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, page, display) => {
+      return display || page;
+    });
+  }
+
+  // 3. Convert Obsidian callouts to blockquotes
+  result = result.replace(
+    /^>\s*\[!(\w+)\]\s*(.*)$/gm,
+    (_match, type, title) => {
+      const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+      return '> **' + capitalizedType + '**: ' + title;
+    }
+  );
+
+  // 4. Shift heading levels: user uses ## as h1, ### as h2
+  result = result.replace(/^(\s*)##/gm, '$1#');
+
+  return result;
+}
+
+/**
+ * Export to Markdown with Obsidian footnotes + Zotero citations (author-year style).
+ *
+ * Flow:
+ * 1. Extract all citation wikilinks from content
+ * 2. Call Zotero API to get CSL JSON for each citekey
+ * 3. Use Pandoc citeproc to format references in author-year style (e.g., APA)
+ * 4. Replace wikilinks in text with "Author (Year)[^n]"
+ * 5. Append "## 参考文献" + footnote definitions at end
+ */
+export async function exportToMarkdownFootnotes(
+  content: string,
+  citations: CitationInfo[],
+  pandocPath: string,
+  cslStyleFile?: string,
+  crossrefFilterPath?: string,
+  crossrefOptions?: {
+    figPrefix?: string;
+    tblPrefix?: string;
+    eqnPrefix?: string;
+    chapDelim?: string;
+    autoSectionLabels?: boolean;
+  }
+): Promise<string> {
+  if (citations.length === 0) {
+    // No citations, just clean up wikilinks and return
+    return cleanMarkdown(content);
+  }
+
+  const tmpDir = os.tmpdir();
+  const baseName = `zotero_export_${Date.now()}`;
+
+  // Define all temp file paths upfront for cleanup
+  const tmpMd = path.join(tmpDir, `${baseName}.md`);
+  const tmpJson = path.join(tmpDir, `${baseName}_csl.json`);
+  const tmpRefsMd = path.join(tmpDir, `${baseName}_refs.md`);
+  const tmpBibMd = path.join(tmpDir, `${baseName}_bib.md`);
+  const tmpFullMd = path.join(tmpDir, `${baseName}_full.md`);
+  const tmpCiteMd = path.join(tmpDir, `${baseName}_cites.md`);
+  const tmpBibMd2 = path.join(tmpDir, `${baseName}_bib2.md`);
+
+  const allTempFiles = [tmpMd, tmpJson, tmpRefsMd, tmpBibMd, tmpFullMd, tmpCiteMd, tmpBibMd2];
+
+  try {
+    // Step 1: Prepare markdown with @citekey citations for pandoc
+    const citekeys = citations.map(c => c.citekey);
+    const uniqueCitekeys = [...new Set(citekeys)];
+
+    // Build markdown with pandoc citations
+    let md = content;
+    // Remove existing frontmatter
+    md = md.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+    // Replace wikilinks with @citekey (will be processed by pandoc citeproc)
+    for (const cit of citations) {
+      const escaped = cit.fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      md = md.replace(new RegExp(escaped, 'g'), `[@${cit.citekey}]`);
+    }
+
+    // Convert other wikilinks to plain text
+    md = cleanMarkdown(md);
+
+    // Add YAML metadata for citeproc
+    let yaml = '---\n';
+    yaml += 'nocite: |\n';
+    for (const ck of uniqueCitekeys) {
+      yaml += `  @${ck}\n`;
+    }
+    yaml += '---\n\n';
+    md = yaml + md;
+
+    fs.writeFileSync(tmpMd, md, 'utf-8');
+
+    // Step 2: Fetch CSL JSON from Zotero API (no BBT required)
+    // Use itemKey directly from citation (the 8-char KEY-XXXXXXXX)
+    // Deduplicate by itemKey
+    const uniqueItemKeys = [...new Set(citations.map(c => c.key))];
+    const itemKeysParam = uniqueItemKeys.join(',');
+    // Local API: users/0 works as "current user"
+    const zoteroApiUrl = `http://127.0.0.1:23119/api/users/0/items?format=csljson&itemKey=${itemKeysParam}`;
+
+    let cslItems: any[] = [];
+    try {
+      const curlCmd = `curl -s "${zoteroApiUrl}"`;
+      const output = execSync(curlCmd, { encoding: 'utf-8', timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'] });
+      const items = JSON.parse(output);
+      if (Array.isArray(items)) {
+        // Keep only main bibliographic items, exclude child items (PDF, notes, annotations)
+        const childTypes = new Set(['document', 'note', 'attachment']);
+        cslItems = items.filter((item: any) => !childTypes.has(item.type));
+      }
+    } catch (e) {
+      console.error('Failed to fetch from Zotero API:', e);
+      throw new Error('无法连接 Zotero，请确保 Zotero 正在运行（端口 23119）且已启用 "Allow other applications on this computer to communicate with Zotero"');
+    }
+
+    if (cslItems.length === 0) {
+      throw new Error('未从 Zotero 获取到文献数据，请检查引用键是否正确');
+    }
+
+    fs.writeFileSync(tmpJson, JSON.stringify(cslItems, null, 2), 'utf-8');
+
+    // Step 3: Determine CSL style to use
+    // If cslStyleFile is a URL or path, use it; otherwise default to 'apa'
+    let cslStyle = cslStyleFile || 'apa';
+
+    // Step 4: Get formatted citations (author-year style)
+    const citeMd = uniqueCitekeys.map(ck => `[@${ck}]`).join('; ');
+    fs.writeFileSync(tmpCiteMd, citeMd, 'utf-8');
+
+    // Use forward slashes for Windows compatibility with execSync
+    const pandocArgs3 = [
+      tmpCiteMd.replace(/\\/g, '/'),
+      '--from', 'markdown',
+      '--to', 'markdown',
+      '--citeproc',
+      '--bibliography', tmpJson.replace(/\\/g, '/'),
+      '--csl', cslStyle,
+    ];
+    // Add pandoc-crossref filter if available
+    if (crossrefFilterPath) {
+      pandocArgs3.push('--filter', crossrefFilterPath.replace(/\\/g, '/'));
+      if (crossrefOptions) {
+        if (crossrefOptions.figPrefix) pandocArgs3.push('--metadata=figPrefix:' + crossrefOptions.figPrefix);
+        if (crossrefOptions.tblPrefix) pandocArgs3.push('--metadata=tblPrefix:' + crossrefOptions.tblPrefix);
+        if (crossrefOptions.eqnPrefix) pandocArgs3.push('--metadata=eqnPrefix:' + crossrefOptions.eqnPrefix);
+        if (crossrefOptions.chapDelim) pandocArgs3.push('--metadata=chapDelim:' + crossrefOptions.chapDelim);
+        if (crossrefOptions.autoSectionLabels !== undefined) pandocArgs3.push('--metadata=autoSectionLabels:' + String(crossrefOptions.autoSectionLabels));
+      }
+    }
+    const cmd3 = `"${pandocPath}" ${pandocArgs3.map(a => `"${a}"`).join(' ')}`;
+    console.log('Running pandoc citeproc (citations):', cmd3);
+    const citeOutput = execSync(cmd3, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
+
+    // Extract just the body citations (before any bibliography div)
+    const bodyText = citeOutput.split(/\n:+\s*\{#refs/)[0].trim();
+
+    // Build citation map: run pandoc once per unique citekey for accurate author-year
+    const citeMap: Record<string, string> = {};
+    for (const ck of uniqueCitekeys) {
+      const singleMd = `[@${ck}]`;
+      const singleTmp = path.join(os.tmpdir(), `zotero_single_${ck}.md`).replace(/\\/g, '/');
+      fs.writeFileSync(singleTmp, singleMd, 'utf-8');
+      const singleArgs = [
+        singleTmp,
+        '--from', 'markdown',
+        '--to', 'markdown',
+        '--citeproc',
+        '--bibliography', tmpJson.replace(/\\/g, '/'),
+        '--csl', cslStyle,
+      ];
+      const singleCmd = `"${pandocPath}" ${singleArgs.map(a => `"${a}"`).join(' ')}`;
+      try {
+        const singleOut = execSync(singleCmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+        const singleBody = singleOut.split(/\n:+\s*\{#refs/)[0].trim();
+        citeMap[ck] = singleBody || ck;
+      } catch {
+        citeMap[ck] = ck;
+      } finally {
+        try { fs.unlinkSync(singleTmp); } catch {}
+      }
+    }
+
+    // Build bibliography from CSL JSON items directly
+    const bibEntries: Record<string, string> = {};
+    for (const item of cslItems) {
+      const citekey = item.id || item['citation-key'] || '';
+      if (!citekey) continue;
+      const authors = (item.author || []).map((a: any) => {
+        if (a.literal) return a.literal;
+        const family = a.family || '';
+        const given = a.given || '';
+        const particle = a['non-dropping-particle'] || '';
+        const fullFamily = particle ? `${particle} ${family}` : family;
+        if (!given) return fullFamily;
+        // Abbreviate given names: "Jade" -> "J.", "R. Kyle" -> "R. K."
+        const abbreviated = given.split(/[\s.-]+/).filter(Boolean).map((n: string) => {
+          if (n.endsWith('.')) return n;  // Already abbreviated (e.g., "R.")
+          return n.charAt(0).toUpperCase() + '.';
+        }).join(' ');
+        return `${fullFamily}, ${abbreviated}`;
+      }).join(', ');
+      const year = item.issued?.['date-parts']?.[0]?.[0] || '';
+      const title = item.title || '';
+      const container = item['container-title'] || '';
+      const volume = item.volume || '';
+      const issue = item.issue || '';
+      const page = item.page || '';
+      const doi = item.DOI || '';
+      const yearStr = `(${year}). `;
+      let ref = `${authors}${authors.endsWith('.') ? '' : '.'} ${yearStr}${title}.`;
+      if (container) ref += ` *${container}*`;
+      if (volume) ref += `, *${volume}*`;
+      if (issue) ref += `(${issue})`;
+      if (page) ref += `, ${page}`;
+      if (!container && !volume && !issue && !page) {
+        // No container info — title already ends with period
+      } else {
+        ref += '.';
+      }
+      if (doi) ref += ` <https://doi.org/${doi}>`;
+      bibEntries[citekey] = ref;
+    }
+
+    // Step 6: Build final markdown
+    let result = content;
+
+    // Build footnote index map for deduplication: citekey -> footnoteIndex
+    const footnoteIndexMap: Record<string, number> = {};
+    let footnoteCounter = 0;
+
+    // First pass: assign footnote index for each unique citekey
+    for (const cit of citations) {
+      if (!footnoteIndexMap[cit.citekey]) {
+        footnoteCounter++;
+        footnoteIndexMap[cit.citekey] = footnoteCounter;
+      }
+    }
+
+    // Second pass: replace wikilinks with author-year + footnote ref
+    for (const cit of citations) {
+      const footnoteIndex = footnoteIndexMap[cit.citekey];
+      const authorYear = citeMap[cit.citekey] || `${cit.alias}`;
+      const escaped = cit.fullMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escaped, 'g'), `${authorYear}[^${footnoteIndex}]`);
+    }
+
+    // Clean other wikilinks
+    result = cleanMarkdown(result);
+
+    // Remove existing frontmatter
+    result = result.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+    // Add footnotes section
+    result += '\n\n## 参考文献\n\n';
+    // Output footnotes in order of first appearance
+    const sortedCitekeys = Object.entries(footnoteIndexMap)
+      .sort((a, b) => a[1] - b[1])
+      .map(([ck]) => ck);
+
+    for (const ck of sortedCitekeys) {
+      const idx = footnoteIndexMap[ck];
+      const fullRef = bibEntries[ck] || ck;
+      result += `[^${idx}]: ${fullRef}\n\n`;
+    }
+
+    return result.trim() + '\n';
+
+  } finally {
+    // Cleanup temp files
+    for (const f of allTempFiles) {
+      try { fs.unlinkSync(f); } catch {}
+    }
+  }
+}
+
+/**
+ * Clean up markdown: convert wikilinks to plain text, handle images, etc.
+ */
+function cleanMarkdown(content: string): string {
+  return applyMarkdownTransformations(content).trim() + '\n';
 }
