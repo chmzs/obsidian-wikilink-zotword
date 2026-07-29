@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
     figureTitle: "图",
     tableTitle: "表",
     equationTitle: "式",
-    chapDelim: ".",
+    chapDelim: "-",
     autoSectionLabels: true,
     crossrefFilterPath: "",
   },
@@ -247,7 +247,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
       .setName("Chapter delimiter")
       .setDesc("章节分隔符")
       .addText((text) => {
-        const ph = isEnglish ? '.' : '。';
+        const ph = isEnglish ? '.' : '-';
         text.setPlaceholder(ph);
         const val = target.chapDelim;
         if (val && val !== ph) text.setValue(val);
