@@ -7,6 +7,9 @@ export interface CrossrefOptions {
   figPrefix: string;
   tblPrefix: string;
   eqnPrefix: string;
+  figureTitle: string;
+  tableTitle: string;
+  equationTitle: string;
   chapDelim: string;
   autoSectionLabels: boolean;
   crossrefFilterPath: string;
@@ -33,6 +36,9 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
     figPrefix: "图",
     tblPrefix: "表",
     eqnPrefix: "式",
+    figureTitle: "图",
+    tableTitle: "表",
+    equationTitle: "式",
     chapDelim: ".",
     autoSectionLabels: true,
     crossrefFilterPath: "",
@@ -186,6 +192,45 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.crossref.eqnPrefix)
           .onChange(async (value) => {
             this.plugin.settings.crossref.eqnPrefix = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Figure title")
+      .setDesc("图题注标题文字（如 '图'、'Figure'），控制题注前的编号前缀")
+      .addText((text) =>
+        text
+          .setPlaceholder("图")
+          .setValue(this.plugin.settings.crossref.figureTitle)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.figureTitle = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Table title")
+      .setDesc("表题注标题文字（如 '表'、'Table'）")
+      .addText((text) =>
+        text
+          .setPlaceholder("表")
+          .setValue(this.plugin.settings.crossref.tableTitle)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.tableTitle = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Equation title")
+      .setDesc("公式题注标题文字（如 '式'、'Equation'）")
+      .addText((text) =>
+        text
+          .setPlaceholder("式")
+          .setValue(this.plugin.settings.crossref.equationTitle)
+          .onChange(async (value) => {
+            this.plugin.settings.crossref.equationTitle = value;
             await this.plugin.saveSettings();
           })
       );

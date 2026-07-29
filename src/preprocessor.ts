@@ -167,6 +167,9 @@ export function buildPandocArgs(
     figPrefix?: string;
     tblPrefix?: string;
     eqnPrefix?: string;
+    figureTitle?: string;
+    tableTitle?: string;
+    equationTitle?: string;
     chapDelim?: string;
     autoSectionLabels?: boolean;
   },
@@ -201,6 +204,15 @@ export function buildPandocArgs(
     }
     if (crossrefOptions.eqnPrefix) {
       args.push('--metadata=eqnPrefix:' + crossrefOptions.eqnPrefix);
+    }
+    if (crossrefOptions.figureTitle) {
+      args.push('--metadata=figureTitle:' + crossrefOptions.figureTitle);
+    }
+    if (crossrefOptions.tableTitle) {
+      args.push('--metadata=tableTitle:' + crossrefOptions.tableTitle);
+    }
+    if (crossrefOptions.equationTitle) {
+      args.push('--metadata=equationTitle:' + crossrefOptions.equationTitle);
     }
     if (crossrefOptions.chapDelim) {
       args.push('--metadata=chapDelim:' + crossrefOptions.chapDelim);
@@ -368,6 +380,9 @@ export async function exportToMarkdownFootnotes(
     figPrefix?: string;
     tblPrefix?: string;
     eqnPrefix?: string;
+    figureTitle?: string;
+    tableTitle?: string;
+    equationTitle?: string;
     chapDelim?: string;
     autoSectionLabels?: boolean;
   }
@@ -474,6 +489,9 @@ export async function exportToMarkdownFootnotes(
         if (crossrefOptions.figPrefix) pandocArgs3.push('--metadata=figPrefix:' + crossrefOptions.figPrefix);
         if (crossrefOptions.tblPrefix) pandocArgs3.push('--metadata=tblPrefix:' + crossrefOptions.tblPrefix);
         if (crossrefOptions.eqnPrefix) pandocArgs3.push('--metadata=eqnPrefix:' + crossrefOptions.eqnPrefix);
+        if (crossrefOptions.figureTitle) pandocArgs3.push('--metadata=figureTitle:' + crossrefOptions.figureTitle);
+        if (crossrefOptions.tableTitle) pandocArgs3.push('--metadata=tableTitle:' + crossrefOptions.tableTitle);
+        if (crossrefOptions.equationTitle) pandocArgs3.push('--metadata=equationTitle:' + crossrefOptions.equationTitle);
         if (crossrefOptions.chapDelim) pandocArgs3.push('--metadata=chapDelim:' + crossrefOptions.chapDelim);
         if (crossrefOptions.autoSectionLabels !== undefined) pandocArgs3.push('--metadata=autoSectionLabels:' + String(crossrefOptions.autoSectionLabels));
       }
