@@ -602,44 +602,34 @@ export async function exportToMarkdownFootnotes(
     const typeCounters: Record<string, { n: number }> = {
       fig: { n: 0 }, tbl: { n: 0 }, eq: { n: 0 },
     };
-    const xrefPattern = /\{#(fig|tbl|eq):([\w-]+)\}/g;
-    let xrefMatch;
-    while ((xrefMatch = xrefPattern.exec(result)) !== null) {
-      const type = xrefMatch[1];
-      const label = xrefMatch[2];
-      // Sub-figure: labels ending with -a, -b, -c share the base figure number
-      const subMatch = label.match(/^(.+)-([a-z])$/);
-      const baseKey = subMatch ? `${type}:${subMatch[1]}` : `${type}:${label}`;
-      if (!xrefCounts[baseKey]) {
-        xrefCounts[baseKey] = ++typeCounters[type].n;
+    const xrefLabelPat = /\{#(fig|tbl|eq):([\w-]+)\}/g;
+    let m;
+    while ((m = xrefLabelPat.exec(result)) !== null) {
+      const key = `${m[1]}:${m[2]}`;
+      if (!xrefCounts[key]) {
+        xrefCounts[key] = ++typeCounters[m[1]].n;
       }
     }
-    const xrefPrefixes: Record<string, string> = {
+    const xrefPref: Record<string, string> = {
       fig: crossrefOptions?.figPrefix || 'Fig.',
       tbl: crossrefOptions?.tblPrefix || 'Tab.',
       eq: crossrefOptions?.eqnPrefix || 'Eq.',
     };
-    result = result.replace(/@(fig|tbl|eq):([\w-]+)\b/g, (_match, type, label) => {
-      // Try exact match first, then with underscores→dashes
-      let key = `${type}:${label}`;
+    result = result.replace(/@(fig|tbl|eq):([\w-]+)\b/g, (_m, type, label) => {
+      // Try exact match, then underscore→dash, then sub-reference (base-a → base + suffix)
+      let norm = label.replace(/_/g, '-');
+      let key = `${type}:${norm}`;
       let num = xrefCounts[key];
-      if (!num && label.includes('_')) {
-        key = `${type}:${label.replace(/_/g, '-')}`;
-        num = xrefCounts[key];
-      }
       if (!num) {
-        // Try as sub-figure: base label + -a, -b, -c suffix
-        const subMatch = label.match(/^(.+)-([a-z])$/);
-        if (subMatch) {
-          const baseLabel = subMatch[1].replace(/_/g, '-');
-          const subLetter = subMatch[2];
-          key = `${type}:${baseLabel}`;
+        const sub = norm.match(/^(.+)-([a-z])$/);
+        if (sub) {
+          key = `${type}:${sub[1]}`;
           num = xrefCounts[key];
-          if (num) return `${xrefPrefixes[type]} ${num}${subLetter}`;
+          if (num) return `${xrefPref[type]} ${num}${sub[2]}`;
         }
       }
-      if (num) return `${xrefPrefixes[type]} ${num}`;
-      return _match;
+      if (num) return `${xrefPref[type]} ${num}`;
+      return _m;
     });
 
     return result.trim() + '\n';
