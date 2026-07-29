@@ -8,6 +8,7 @@ import {
   ZoteroExportSettings,
   DEFAULT_SETTINGS,
   ZoteroExportSettingTab,
+  type CrossrefOptions,
 } from "./settings";
 
 import {
@@ -16,6 +17,25 @@ import {
   buildPandocArgs,
   exportToMarkdownFootnotes,
 } from "./preprocessor";
+
+/**
+ * Parse YAML frontmatter from markdown content and extract crossref overrides.
+ */
+function parseCrossrefOverrides(content: string): Partial<CrossrefOptions> {
+  const overrides: Partial<CrossrefOptions> = {};
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return overrides;
+
+  const crossrefKeys = ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const;
+  for (const key of crossrefKeys) {
+    const regex = new RegExp(`^${key}:\\s*(.+)$`, 'm');
+    const m = match[1].match(regex);
+    if (m) {
+      (overrides as any)[key] = m[1].trim().replace(/^['"](.*)['"]$/, '$1');
+    }
+  }
+  return overrides;
+}
 
 export default class ZoteroExportPlugin extends Plugin {
   settings: ZoteroExportSettings = DEFAULT_SETTINGS;
@@ -78,8 +98,12 @@ export default class ZoteroExportPlugin extends Plugin {
 
       citations.forEach(c => console.log(`  ${c.fullMatch} → @${c.citekey}`));
 
-      // 2. Preprocess markdown (BBT mode uses local construction, which now matches BBT config)
+      // 2. Preprocess markdown
       const preprocessed = preprocessMarkdown(content, this.settings.cslStyle, this.settings.exportMode);
+
+      // 2b. Parse YAML frontmatter for per-document crossref overrides
+      const yamlOverrides = parseCrossrefOverrides(content);
+      const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
 
       // 4. Write temp files
       const tmpDir = os.tmpdir();
@@ -98,7 +122,7 @@ export default class ZoteroExportPlugin extends Plugin {
         filterPath,
         this.settings.cslStyle,
         this.settings.templatePath,
-        this.settings.crossref,
+        crossrefOptions,
         crossrefFilterPath
       );
       const cmd = `"${this.settings.pandocPath}" ${pandocArgs.map(a => `"${a}"`).join(" ")}`;
@@ -182,9 +206,11 @@ export default class ZoteroExportPlugin extends Plugin {
 
       // 2. Run markdown footnotes conversion
       const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
+      const yamlOverrides = parseCrossrefOverrides(content);
+      const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
       const result = await exportToMarkdownFootnotes(
         content, citations, this.settings.pandocPath, this.settings.cslStyleFile,
-        crossrefFilterPath, this.settings.crossref
+        crossrefFilterPath, crossrefOptions
       );
 
       if (citations.length > 0) {
