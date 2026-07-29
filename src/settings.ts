@@ -17,7 +17,6 @@ export interface CrossrefOptions {
 
 export interface ZoteroExportSettings {
   pandocPath: string;
-  cslStyle: string;
   outputDir: string;
   templatePath: string;
   exportMode: ExportMode;
@@ -28,7 +27,6 @@ export interface ZoteroExportSettings {
 
 export const DEFAULT_SETTINGS: ZoteroExportSettings = {
   pandocPath: "pandoc",
-  cslStyle: "china-national-standard-gb-t-7714-2015-numeric",
   outputDir: "",
   templatePath: "",
   exportMode: "bbt",
@@ -78,33 +76,6 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     // --- Export ---
     containerEl.createEl("h3", { text: "导出设置" });
 
-    new Setting(containerEl)
-      .setName("Export mode")
-      .setDesc("BBT: 依赖 Better BibTeX，活引文 + citekey 映射。Lite: 仅需 Zotero，直接用 8 位 itemKey。")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("bbt", "BBT (完整版)")
-          .addOption("lite", "Lite (无 BBT)")
-          .setValue(this.plugin.settings.exportMode)
-          .onChange(async (value: string) => {
-            this.plugin.settings.exportMode = value as ExportMode;
-            await this.plugin.saveSettings();
-            this.display();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("CSL style")
-      .setDesc("引用样式 ID（如 china-national-standard-gb-t-7714-2015-numeric），用于 Word 导出")
-      .addText((text) =>
-        text
-          .setPlaceholder("china-national-standard-gb-t-7714-2015-numeric")
-          .setValue(this.plugin.settings.cslStyle)
-          .onChange(async (value) => {
-            this.plugin.settings.cslStyle = value;
-            await this.plugin.saveSettings();
-          })
-      );
 
     // CSL style file for markdown-footnotes mode
     new Setting(containerEl)

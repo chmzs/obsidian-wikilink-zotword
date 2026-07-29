@@ -67,25 +67,25 @@ describe('extractCitations', () => {
 describe('preprocessMarkdown', () => {
   it('converts wikilinks to [@citekey]', () => {
     const content = 'Text [[2018_Zhang_TITLE_KEY-FLBB3YEH|Zhang 2018]] end';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH]');
   });
 
   it('merges citations in parentheses', () => {
     const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]; [[2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
   });
 
   it('handles Chinese parentheses', () => {
     const content = '（[[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]；[[2021_Rao_TITLE_KEY-W2D6EPGU|B]]）';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
   });
 
   it('removes outer parentheses around citation group', () => {
     const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]])';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     // Should not have outer parentheses
     expect(result).not.toMatch(/\(\[@/);
     expect(result).toContain('[@zhang2018-FLBB3YEH]');
@@ -93,59 +93,58 @@ describe('preprocessMarkdown', () => {
 
   it('lite mode uses itemKey', () => {
     const content = '[[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]';
-    const result = preprocessMarkdown(content, undefined, 'lite');
+    const result = preprocessMarkdown(content, 'lite');
     expect(result).toContain('[@FLBB3YEH]');
   });
 
   it('adds YAML frontmatter', () => {
     const content = '[[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]';
-    const result = preprocessMarkdown(content, 'test-style', 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('zotero_client: zotero');
-    expect(result).toContain('zotero_csl-style: test-style');
   });
 
   it('converts regular wikilinks to plain text', () => {
     const content = 'See [[Page Name]] and [[Page|Display]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('Page Name');
     expect(result).toContain('Display');
   });
 
   it('converts image embeds', () => {
     const content = '![[image.png]] and ![[img.png|200]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![](image.png)');
     expect(result).toContain('![](img.png){ width=200 }');
   });
 
   it('converts image embed with caption to fig crossref', () => {
     const content = '![[fig1.png|长江中下游花粉重建结果]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![长江中下游花粉重建结果](fig1.png){#fig:fig1}');
   });
 
   it('distinguishes caption from size parameter', () => {
     const content = '![[img.png|200]] and ![[img2.png|题注文字]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![](img.png){ width=200 }');
     expect(result).toContain('![题注文字](img2.png){#fig:img2}');
   });
 
   it('converts standard markdown image with caption to fig crossref', () => {
     const content = '![长江中下游花粉重建结果](D:/附件/fig1.png)';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![长江中下游花粉重建结果](D:/附件/fig1.png){#fig:fig1}');
   });
 
   it('converts standard markdown image with size parameter', () => {
     const content = '![题注|200](image.png)';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![题注](image.png){ width=200 }');
   });
 
   it('does not add fig label to empty alt text', () => {
     const content = '![](image.png)';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![](image.png)');
     expect(result).not.toContain('{#fig:');
   });
@@ -155,7 +154,7 @@ describe('preprocessMarkdown', () => {
 > 该数据基于 12 个采样点。
 >
 > ![](D:/附件/fig1.png)`;
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![图 1 长江中下游花粉重建结果](D:/附件/fig1.png){#fig:1}');
     expect(result).toContain('该数据基于 12 个采样点。');
     expect(result).not.toContain('> [!figure]');
@@ -168,7 +167,7 @@ describe('preprocessMarkdown', () => {
 > | 指标 | 信号 |
 > |------|------|
 > | 花粉 | 温度 |`;
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain(': 表 1 不同代用指标的气候意义 {#tbl:1}');
     expect(result).toContain('| 指标 | 信号 |');
     expect(result).toContain('数据来源：综合多篇文献。');
@@ -177,7 +176,7 @@ describe('preprocessMarkdown', () => {
 
   it('converts callouts to blockquotes', () => {
     const content = '> [!note] This is a note';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('> **Note**: This is a note');
   });
 });
@@ -186,7 +185,7 @@ describe('preprocessMarkdown with BBT citekey map', () => {
   it('uses provided citekey map', () => {
     const content = '[[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]';
     const map = { FLBB3YEH: 'custom-citekey' };
-    const result = preprocessMarkdown(content, undefined, 'bbt', map);
+    const result = preprocessMarkdown(content, 'bbt', map);
     expect(result).toContain('[@custom-citekey]');
   });
 });
@@ -194,19 +193,19 @@ describe('preprocessMarkdown with BBT citekey map', () => {
 describe('preprocessMarkdown - image embed edge cases', () => {
   it('converts image embed with Chinese path', () => {
     const content = '![[附件/图片.png]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![](附件/图片.png)');
   });
 
   it('converts image embed with size', () => {
     const content = '![[chart.png|400]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![](chart.png){ width=400 }');
   });
 
   it('does not confuse image embed with citation wikilink', () => {
     const content = '![[image_KEY-ABCDEF12.png]] and [[2018_Zhang_TITLE_KEY-FLBB3YEH|Zhang]]';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('![](image_KEY-ABCDEF12.png)');
     expect(result).toContain('[@zhang2018-FLBB3YEH]');
   });
@@ -215,19 +214,19 @@ describe('preprocessMarkdown - image embed edge cases', () => {
 describe('preprocessMarkdown - parenthesized citations edge cases', () => {
   it('merges three citations in parentheses', () => {
     const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]; [[2021_Rao_TITLE_KEY-W2D6EPGU|B]]; [[2023_Chen_TITLE_KEY-4NX85H85|C]])';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU; @chen2023-4NX85H85]');
   });
 
   it('handles mixed separators in parentheses', () => {
     const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]、[[2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
   });
 
   it('preserves text around parenthesized citations', () => {
     const content = 'As shown in ([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]; [[2021_Rao_TITLE_KEY-W2D6EPGU|B]]), the data suggests...';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('As shown in');
     expect(result).toContain('[@zhang2018-FLBB3YEH; @rao2021-W2D6EPGU]');
     expect(result).toContain('the data suggests');
@@ -235,7 +234,7 @@ describe('preprocessMarkdown - parenthesized citations edge cases', () => {
 
   it('handles multiple parenthesized groups', () => {
     const content = '([[2018_Zhang_TITLE_KEY-FLBB3YEH|A]]) and ([[2021_Rao_TITLE_KEY-W2D6EPGU|B]])';
-    const result = preprocessMarkdown(content, undefined, 'bbt');
+    const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('[@zhang2018-FLBB3YEH]');
     expect(result).toContain('[@rao2021-W2D6EPGU]');
   });
@@ -254,13 +253,14 @@ describe('buildPandocArgs', () => {
     expect(args).toContain('out.docx');
   });
 
-  it('includes CSL style', () => {
-    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', 'my-style');
-    expect(args).toContain('--metadata=zotero_csl-style:my-style');
+  it('includes template path', () => {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', 'template.docx');
+    expect(args).toContain('--reference-doc');
+    expect(args).toContain('template.docx');
   });
 
   it('includes crossref metadata', () => {
-    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, undefined, {
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, {
       figPrefix: '图',
       tblPrefix: '表',
       eqnPrefix: '式',
@@ -275,14 +275,10 @@ describe('buildPandocArgs', () => {
   });
 
   it('includes crossref filter path', () => {
-    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, undefined, undefined, '/tools/pandoc-crossref.exe');
+    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, undefined, '/tools/pandoc-crossref.exe');
     expect(args).toContain('--filter');
     expect(args).toContain('/tools/pandoc-crossref.exe');
   });
 
-  it('includes reference-doc for template', () => {
-    const args = buildPandocArgs('in.md', 'out.docx', 'filter.lua', undefined, 'template.docx');
-    expect(args).toContain('--reference-doc');
-    expect(args).toContain('template.docx');
-  });
+
 });

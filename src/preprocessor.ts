@@ -80,13 +80,8 @@ export function extractItemKey(filename: string): string {
 /**
  * Generate YAML frontmatter for Pandoc with zotero.lua configuration.
  */
-export function generateFrontmatter(cslStyle?: string): string {
-  let meta = '---\nzotero_client: zotero\n';
-  if (cslStyle) {
-    meta += `zotero_csl-style: ${cslStyle}\n`;
-  }
-  meta += '---\n\n';
-  return meta;
+export function generateFrontmatter(): string {
+  return '---\nzotero_client: zotero\n---\n\n';
 }
 
 /**
@@ -97,7 +92,6 @@ export function generateFrontmatter(cslStyle?: string): string {
  */
 export function preprocessMarkdown(
   content: string,
-  cslStyle?: string,
   mode: 'bbt' | 'lite' = 'bbt',
   bbtCitekeyMap?: Record<string, string>
 ): string {
@@ -149,7 +143,7 @@ export function preprocessMarkdown(
   });
 
   // 5. Prepend YAML frontmatter
-  result = generateFrontmatter(cslStyle) + result;
+  result = generateFrontmatter() + result;
 
   return result.trim() + '\n';
 }
@@ -161,7 +155,6 @@ export function buildPandocArgs(
   inputPath: string,
   outputPath: string,
   luaFilterPath: string,
-  cslStyle?: string,
   templatePath?: string,
   crossrefOptions?: {
     figPrefix?: string;
@@ -185,9 +178,6 @@ export function buildPandocArgs(
   // zotero.lua reads these from YAML metadata, but command-line metadata overrides
   args.push('--metadata=zotero_client:zotero');
 
-  if (cslStyle) {
-    args.push('--metadata=zotero_csl-style:' + cslStyle);
-  }
 
   // Custom Word template
   if (templatePath) {

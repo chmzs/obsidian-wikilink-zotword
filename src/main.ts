@@ -99,7 +99,7 @@ export default class ZoteroExportPlugin extends Plugin {
       citations.forEach(c => console.log(`  ${c.fullMatch} → @${c.citekey}`));
 
       // 2. Preprocess markdown
-      const preprocessed = preprocessMarkdown(content, this.settings.cslStyle, this.settings.exportMode);
+      const preprocessed = preprocessMarkdown(content, this.settings.exportMode);
 
       // 2b. Parse YAML frontmatter for per-document crossref overrides
       const yamlOverrides = parseCrossrefOverrides(content, this.settings);
@@ -120,8 +120,7 @@ export default class ZoteroExportPlugin extends Plugin {
         tmpMd,
         tmpDocx,
         filterPath,
-        this.settings.cslStyle,
-        this.settings.templatePath,
+                this.settings.templatePath,
         crossrefOptions,
         crossrefFilterPath
       );
