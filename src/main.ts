@@ -16,6 +16,7 @@ import {
   preprocessMarkdown,
   buildPandocArgs,
   exportToMarkdownFootnotes,
+  resolveCrossrefs,
 } from "./preprocessor";
 
 /**
@@ -118,13 +119,16 @@ export default class ZoteroExportPlugin extends Plugin {
       const yamlOverrides = parseCrossrefOverrides(content, this.settings);
       const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
 
-      // 4. Write temp files
+      // 4. Resolve cross-references (before pandoc, since crossref filter may not be used)
+      const resolved = resolveCrossrefs(preprocessed, crossrefOptions);
+
+      // 5. Write temp files
       const tmpDir = os.tmpdir();
       const baseName = path.basename(file.path, ".md");
       const tmpMd = path.join(tmpDir, `${baseName}_zotero_export.md`).replace(/\\/g, '/');
       const tmpDocx = path.join(tmpDir, `${baseName}_export.docx`).replace(/\\/g, '/');
 
-      fs.writeFileSync(tmpMd, preprocessed, "utf-8");
+      fs.writeFileSync(tmpMd, resolved, "utf-8");
 
       // 5. Run Pandoc
       const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;

@@ -223,6 +223,42 @@ export function buildPandocArgs(
 }
 
 /**
+ * Resolve cross-references (@fig:xxx, @tbl:xxx, @eq:xxx → prefix + number).
+ * Scans for {#fig:xxx} labels, assigns sequential numbers, replaces references.
+ */
+export function resolveCrossrefs(content: string, options?: {
+  figPrefix?: string; tblPrefix?: string; eqnPrefix?: string;
+}): string {
+  const counts: Record<string, number> = {};
+  const counters = { fig: 0, tbl: 0, eq: 0 };
+  const labelPat = /\{#(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\}/g;
+  let m;
+  while ((m = labelPat.exec(content)) !== null) {
+    const key = `${m[1]}:${m[2]}`;
+    if (!counts[key]) counts[key] = ++counters[m[1] as keyof typeof counters];
+  }
+  const pref: Record<string, string> = {
+    fig: options?.figPrefix || 'Fig.',
+    tbl: options?.tblPrefix || 'Tab.',
+    eq: options?.eqnPrefix || 'Eq.',
+  };
+  return content.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\b/g, (_m, type, label) => {
+    let key = `${type}:${label}`;
+    let num = counts[key];
+    if (!num) {
+      const sub = label.match(/^(.+)_([a-z])$/);
+      if (sub) {
+        key = `${type}:${sub[1]}`;
+        num = counts[key];
+        if (num) return `${pref[type]} ${num}${sub[2]}`;
+      }
+    }
+    if (num) return `${pref[type]} ${num}`;
+    return _m;
+  });
+}
+
+/**
  * Shared markdown transformations used by both preprocessMarkdown and cleanMarkdown.
  * Handles: YAML frontmatter removal, image embeds, figure/table callouts,
  * wikilink conversion, callout→blockquote, heading shift.
@@ -597,39 +633,8 @@ export async function exportToMarkdownFootnotes(
       result += `[^${idx}]: ${fullRef}\n\n`;
     }
 
-    // Resolve cross-references (@fig:xxx, @tbl:xxx, @eq:xxx → prefix + number)
-    const xrefCounts: Record<string, number> = {};
-    const typeCounters: Record<string, { n: number }> = {
-      fig: { n: 0 }, tbl: { n: 0 }, eq: { n: 0 },
-    };
-    const xrefLabelPat = /\{#(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\}/g;
-    let m;
-    while ((m = xrefLabelPat.exec(result)) !== null) {
-      const key = `${m[1]}:${m[2]}`;
-      if (!xrefCounts[key]) {
-        xrefCounts[key] = ++typeCounters[m[1]].n;
-      }
-    }
-    const xrefPref: Record<string, string> = {
-      fig: crossrefOptions?.figPrefix || 'Fig.',
-      tbl: crossrefOptions?.tblPrefix || 'Tab.',
-      eq: crossrefOptions?.eqnPrefix || 'Eq.',
-    };
-    result = result.replace(/@(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\b/g, (_m, type, label) => {
-      // Try exact match, then as sub-figure (base-a → prefix Nsuffix)
-      let key = `${type}:${label}`;
-      let num = xrefCounts[key];
-      if (!num) {
-        const sub = label.match(/^(.+)_([a-z])$/);
-        if (sub) {
-          key = `${type}:${sub[1]}`;
-          num = xrefCounts[key];
-          if (num) return `${xrefPref[type]} ${num}${sub[2]}`;
-        }
-      }
-      if (num) return `${xrefPref[type]} ${num}`;
-      return _m;
-    });
+    // Resolve cross-references
+    result = resolveCrossrefs(result, crossrefOptions);
 
     return result.trim() + '\n';
 
