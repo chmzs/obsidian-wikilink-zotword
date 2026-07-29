@@ -143,7 +143,11 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 ### BBT 模式（推荐）
 
 1. Zotero → 工具 → 附加组件 → 获取更多附加组件 → 搜索 "Better BibTeX" → 安装 → 重启 Zotero
-2. **配置特殊字符过滤**（解决弯撇号问题）：
+2. **配置引用键格式**：
+   - BBT 设置中建议将 citekey 格式设为 `{auth.lower}{year}-{itemKey}`（即 `auth.lower + year + '-' + item`）
+   - 必须保证 citekey 末尾包含 8 位 item key，否则 Lite 模式无法匹配
+   - 本插件默认构造格式为 `auth.lower + year`，但推荐在 BBT 中统一配置为带 `{itemKey}` 的版本
+3. **配置特殊字符过滤**（解决弯撇号问题）：
    - 编辑 → 首选项 → 高级 → 配置编辑器
    - 搜索 `extensions.zotero.translators.better-bibtex.citekeyUnsafeChars`
    - 值末尾添加弯撇号 `'`（U+2019）：`"#%'(),={}~'"`
