@@ -91,7 +91,8 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 > - `@tbl:N` → "表 N"（引用第 N 个表格）
 > - `@eq:name` → "式 N"（引用公式）
 > - 前缀可在设置中自定义（如改为 `Fig.`、`Tab.`、`Eq.`）
-> - 需安装 [pandoc-crossref](https://github.com/tomduck/pandoc-crossref)，Quarto 用户自动检测
+> - 需安装 [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases)，在设置中填入可执行文件路径
+> - **Easy Typing 用户**：若 `{#fig:label}` 被自动加空格，在 Easy Typing 设置 → 自动格式化 → 用户自定义正则表达式区块首行添加 `\{#[\w\-:]+\}|--`
 
 ## Markdown 脚注导出
 
@@ -136,7 +137,9 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 | Figure prefix | `图` | 图前缀 |
 | Table prefix | `表` | 表前缀 |
 | Equation prefix | `式` | 公式前缀 |
-| pandoc-crossref path | （空=不使用） | pandoc-crossref 可执行文件路径（如 `D:/tools/pandoc-crossref.exe`），需自行安装 |
+| pandoc-crossref path | （空=不使用） | [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) 可执行文件路径（如 `D:/tools/pandoc-crossref.exe`），需自行下载安装 |
+
+> 下载 Windows 版本 `pandoc-crossref.exe` 后，填设置中填入完整路径（如 `D:/tools/pandoc-crossref.exe`）。 |
 
 ## 用户配置指南
 

@@ -89,7 +89,8 @@ As shown in @eq:quadratic, ...
 > - `@tbl:N` → "Table N" (reference the Nth table)
 > - `@eq:name` → "Eq N" (reference an equation)
 > - Prefixes are customizable in settings (e.g., `图`, `Fig.`, `Tab.`)
-> - Requires [pandoc-crossref](https://github.com/tomduck/pandoc-crossref); auto-detected for Quarto users
+> - Requires [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) — set the executable path in settings
+> - **Easy Typing users**: if `{#fig:label}` gets auto-spaced, add `\{#[\w\-:]+\}|--` as the first line in Easy Typing settings → Auto Formatting → User Custom Regex Blocks
 
 ## Markdown footnotes export
 
@@ -134,7 +135,7 @@ as shown in @fig:1 and @tbl:1.
 | Figure prefix | `Fig.` | Figure label prefix |
 | Table prefix | `Tab.` | Table label prefix |
 | Equation prefix | `Eq.` | Equation label prefix |
-| pandoc-crossref path | (empty = disabled) | Absolute path to pandoc-crossref (e.g., `D:/tools/pandoc-crossref.exe`), must be installed separately |
+| pandoc-crossref path | (empty = disabled) | [Download](https://github.com/lierdakil/pandoc-crossref/releases) pandoc-crossref and set the full path (e.g., `D:/tools/pandoc-crossref.exe`) | |
 
 ## Setup guide
 
