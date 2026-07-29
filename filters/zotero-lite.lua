@@ -1600,10 +1600,17 @@ local function load_items()
     return
   end
 
-  -- 将 itemKey 映射到 items
+  -- 将 itemId 和短 KEY 映射到 items（lite 模式用 8 位短 KEY 查找）
   for _, item in ipairs(fetched) do
     if item and item.id then
       state.fetched.items[item.id] = item
+      -- 从 id 末尾提取 8 位 KEY（如 "dalpoimguedes2018-NHBWJTS2" → "NHBWJTS2"）
+      -- 无 BBT 时 id 为 URL: "...zotero.org/.../items/NHBWJTS2" → "NHBWJTS2"
+      local shortId = item.id:match("%-([A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])$")
+        or item.id:match("([A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])$")
+      if shortId then
+        state.fetched.items[shortId] = item
+      end
     end
   end
 end

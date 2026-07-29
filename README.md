@@ -23,8 +23,8 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 | **Lite** | 同上 | `.docx`（活引文） | Zotero + Pandoc |
 | **脚注** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md`（作者年份制脚注） | Zotero + Pandoc |
 
-- **BBT**（推荐）：引用格式最准确，支持 CSL 样式切换
-- **Lite**：无需安装 BBT，适合受限环境
+- **BBT**（推荐）：活引文最稳定，支持 CSL 样式切换，高级作者名处理
+- **Lite**：无需安装 BBT，适合受限环境。生成的活引文可正常刷新
 - **脚注**：适合微信公众号、博客等 Markdown 发布平台
 
 ## 安装
@@ -171,7 +171,7 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 </details>
 
 <details>
-<summary>`d'Alpoim Guedes` 等弯撇号作者导出失败</summary>
+<summary>`d'cona Guedes` 等弯撇号作者导出失败</summary>
 
 BBT 模式需配置 `citekeyUnsafeChars`（见上文配置指南）并重新生成引用键。Lite 模式无此问题。
 </details>
@@ -199,6 +199,12 @@ BBT 模式需配置 `citekeyUnsafeChars`（见上文配置指南）并重新生�
 
 当前版本暂不支持，计划在 v0.3 实现。
 </details>
+
+## 未来计划
+
+- **v0.3** — 批量导出多个笔记 + 导出进度条
+- **v0.4** — 双语引文（中英文混合）
+- **v0.5** — 边写边引：命令面板搜索 Zotero 文献 → 插入 wikilink
 
 ## 开发
 
