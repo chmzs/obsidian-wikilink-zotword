@@ -21,8 +21,8 @@ Zotero excels at reference management, but its note-taking and writing output le
 | **Lite** | Same as above | `.docx` (live citations) | Zotero + Pandoc |
 | **Footnotes** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md` (author-year footnotes) | Zotero + Pandoc |
 
-- **BBT** (recommended): Most accurate citations, full CSL style support
-- **Lite**: No BBT needed, ideal for restricted environments
+- **BBT** (recommended): Most reliable live citations, full CSL style support, advanced author name handling
+- **Lite**: No BBT needed, ideal for restricted environments. Generated live citations can be refreshed normally
 - **Footnotes**: Great for WeChat, blogs, and Markdown publishing platforms
 
 ## Installation
