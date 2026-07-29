@@ -1,5 +1,7 @@
 # Wikilink to Zotero Word
 
+> [English](README.en.md) | 中文
+
 将 Obsidian `[[wikilink]]` 文献引用导出为 Word 中的 Zotero 活引文，或 Markdown 作者年份制脚注。
 
 > [!tip] 推荐搭配
