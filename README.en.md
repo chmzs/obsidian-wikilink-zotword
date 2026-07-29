@@ -85,10 +85,13 @@ As shown in @eq:quadratic, ...
 ```
 
 > [!info] Cross-reference syntax
-> - `@fig:N` → "Fig N" (reference the Nth figure)
-> - `@tbl:N` → "Table N" (reference the Nth table)
-> - `@eq:name` → "Eq N" (reference an equation)
-> - Prefixes are customizable in settings (e.g., `图`, `Fig.`, `Tab.`)
+> - `@fig:name` → `Fig. N` (reference a figure)
+> - `@tbl:name` → `Tab. N` (reference a table)
+> - `@eq:name` → `Eq. N` (reference an equation)
+> - **Label naming**: `a-zA-Z0-9-` only, use `-` between words (e.g. `{#fig:temp-curve}`), **no underscores**
+> - **Sub-figure**: share label, append `_a` `_b` suffix: `@fig:name_a` → `Fig. N a`
+> - Prefixes are customizable in settings
+> - YAML frontmatter: `crossref_lang: zh` or `crossref_lang: en` to switch presets
 > - Requires [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) — set the executable path in settings
 > - **Easy Typing users**: if `{#fig:label}` gets auto-spaced, add `\{#[\w\-:]+\}|--` as the first line in Easy Typing settings → Auto Formatting → User Custom Regex Blocks
 

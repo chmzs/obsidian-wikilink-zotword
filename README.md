@@ -87,10 +87,13 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 ```
 
 > [!info] 交叉引用说明
-> - `@fig:N` → "图 N"（引用第 N 张图片）
-> - `@tbl:N` → "表 N"（引用第 N 个表格）
-> - `@eq:name` → "式 N"（引用公式）
+> - `@fig:name` → `图 N`（引用图片）
+> - `@tbl:name` → `表 N`（引用表格）
+> - `@eq:name` → `式 N`（引用公式）
+> - **标签名规则**：仅允许 `a-zA-Z0-9-`，用 `-` 连接单词（如 `{#fig:temp-curve}`），**不允许下划线**
+> - **子图**：同一图多个子图共享标签名，引用加 `_a` `_b` 后缀：`@fig:name_a` → `图 N a`
 > - 前缀可在设置中自定义（如改为 `Fig.`、`Tab.`、`Eq.`）
+> - 文档 YAML 用 `crossref_lang: zh` / `crossref_lang: en` 切换中英文预设
 > - 需安装 [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases)，在设置中填入可执行文件路径
 > - **Easy Typing 用户**：若 `{#fig:label}` 被自动加空格，在 Easy Typing 设置 → 自动格式化 → 用户自定义正则表达式区块首行添加 `\{#[\w\-:]+\}|--`
 
