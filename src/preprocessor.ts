@@ -620,7 +620,7 @@ export async function exportToMarkdownFootnotes(
       let key = `${type}:${label}`;
       let num = xrefCounts[key];
       if (!num) {
-        const sub = label.match(/^(.+)-([a-z])$/);
+        const sub = label.match(/^(.+)_([a-z])$/);
         if (sub) {
           key = `${type}:${sub[1]}`;
           num = xrefCounts[key];
