@@ -76,6 +76,20 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     // --- Export ---
     containerEl.createEl("h3", { text: "导出设置" });
 
+    new Setting(containerEl)
+      .setName("Export mode")
+      .setDesc("BBT: 依赖 Better BibTeX，活引文 + citekey 映射。Lite: 仅需 Zotero，直接用 8 位 itemKey。")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("bbt", "BBT (完整版)")
+          .addOption("lite", "Lite (无 BBT)")
+          .setValue(this.plugin.settings.exportMode)
+          .onChange(async (value: string) => {
+            this.plugin.settings.exportMode = value as ExportMode;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
 
     // CSL style file for markdown-footnotes mode
     new Setting(containerEl)
@@ -136,12 +150,6 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     // --- Crossref Options ---
     containerEl.createEl("h3", { text: "图表交叉引用 (pandoc-crossref)" });
 
-    containerEl.createEl("h4", { text: "中文预设" });
-    this.addCrossrefSettings(containerEl, this.plugin.settings.crossref);
-
-    containerEl.createEl("h4", { text: "English preset" });
-    this.addCrossrefSettings(containerEl, this.plugin.settings.crossrefEn);
-
     new Setting(containerEl)
       .setName("pandoc-crossref path")
       .setDesc("pandoc-crossref 可执行文件路径，需自行下载安装。如 D:/tools/pandoc-crossref.exe")
@@ -154,6 +162,12 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    containerEl.createEl("h4", { text: "中文预设" });
+    this.addCrossrefSettings(containerEl, this.plugin.settings.crossref);
+
+    containerEl.createEl("h4", { text: "English preset" });
+    this.addCrossrefSettings(containerEl, this.plugin.settings.crossrefEn);
   }
 
   private addCrossrefSettings(container: HTMLElement, target: CrossrefOptions) {

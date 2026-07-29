@@ -64,7 +64,15 @@ export default class ZoteroExportPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const saved = await this.loadData() || {};
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+    // Deep merge crossref and crossrefEn (shallow Object.assign doesn't handle nested objects)
+    if (saved.crossref) {
+      this.settings.crossref = { ...DEFAULT_SETTINGS.crossref, ...saved.crossref };
+    }
+    if (saved.crossrefEn) {
+      this.settings.crossrefEn = { ...DEFAULT_SETTINGS.crossrefEn, ...saved.crossrefEn };
+    }
   }
 
   async saveSettings() {
