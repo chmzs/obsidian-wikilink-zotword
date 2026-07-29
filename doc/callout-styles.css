@@ -1,0 +1,17 @@
+/* 图表题注 Callout 样式 - 用于 Obsidian Live Preview */
+/* 将此文件放入 {vault}/.obsidian/snippets/，在设置 → 外观 → CSS 代码片段 中启用 */
+
+.callout[data-callout="figure"] {
+  --callout-color: 70, 130, 180;
+  --callout-icon: lucide-image;
+}
+
+.callout[data-callout="table"] {
+  --callout-color: 60, 150, 100;
+  --callout-icon: lucide-table;
+}
+
+.callout[data-callout="equation"] {
+  --callout-color: 180, 100, 60;
+  --callout-icon: lucide-sigma;
+}
