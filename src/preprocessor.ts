@@ -278,9 +278,9 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
       figCounter++;
       // Extract optional custom label {#fig:xxx} from caption
-      const labelMatch = caption.match(/\{#([a-zA-Z][\w-]*)\}$/);
-      const figLabel = labelMatch ? 'fig:' + labelMatch[1] : 'fig:' + figCounter;
-      const captionText = labelMatch ? caption.replace(/\s*\{#[\w-]*\}$/, '') : caption;
+      const labelMatch = caption.match(/\{#([\w:-]+)\}$/);
+      const figLabel = labelMatch ? labelMatch[1] : 'fig:' + figCounter;
+      const captionText = labelMatch ? caption.replace(/\s*\{#[\w:-]+\}$/, '') : caption;
       const annotation = annotationBlock
         .split('\n')
         .map((line: string) => line.replace(/^>\s?/, '').trim())
@@ -307,9 +307,9 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     if (tableMatch) {
       tableCounter++;
       const captionFull = tableMatch[1].trim();
-      const labelMatch = captionFull.match(/\{#([a-zA-Z][\w-]*)\}$/);
-      const tblLabel = labelMatch ? 'tbl:' + labelMatch[1] : 'tbl:' + tableCounter;
-      const caption = labelMatch ? captionFull.replace(/\s*\{#[\w-]*\}$/, '') : captionFull;
+      const labelMatch = captionFull.match(/\{#([\w:-]+)\}$/);
+      const tblLabel = labelMatch ? labelMatch[1] : 'tbl:' + tableCounter;
+      const caption = labelMatch ? captionFull.replace(/\s*\{#[\w:-]+\}$/, '') : captionFull;
       i++;
 
       const annotationLines: string[] = [];
