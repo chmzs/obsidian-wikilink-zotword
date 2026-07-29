@@ -164,74 +164,108 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
       );
 
     const xrefContainer = containerEl.createDiv({ cls: "crossref-settings" });
+
+    // Preset buttons
+    const presetRow = xrefContainer.createDiv({ attr: { style: "margin-bottom:16px;display:flex;gap:8px;" } });
+    presetRow.createEl("span", { text: "快速预设: ", attr: { style: "line-height:2;" } });
+    const zhBtn = presetRow.createEl("button", { text: "填入中文默认", attr: { style: "cursor:pointer;" } });
+    zhBtn.onclick = () => {
+      const def = DEFAULT_SETTINGS.crossref;
+      Object.assign(this.plugin.settings.crossref, def);
+      this.plugin.saveSettings();
+      this.display();
+    };
+    const enBtn = presetRow.createEl("button", { text: "填入英文默认", attr: { style: "cursor:pointer;" } });
+    enBtn.onclick = () => {
+      const def = DEFAULT_SETTINGS.crossrefEn;
+      Object.assign(this.plugin.settings.crossrefEn, def);
+      this.plugin.saveSettings();
+      this.display();
+    };
+
     const grid = xrefContainer.createDiv({ attr: { style: "display:grid;grid-template-columns:1fr 1fr;gap:0 24px;" } });
 
     // Column 1: Chinese
     const zhCol = grid.createDiv();
     zhCol.createEl("h5", { text: "中文" });
-    this.crossrefFields(zhCol, this.plugin.settings.crossref, false);
+    this.xrefColumn(zhCol, this.plugin.settings.crossref, false);
 
     // Column 2: English
     const enCol = grid.createDiv();
     enCol.createEl("h5", { text: "English" });
-    this.crossrefFields(enCol, this.plugin.settings.crossrefEn, true);
+    this.xrefColumn(enCol, this.plugin.settings.crossrefEn, true);
 
-    new Setting(containerEl)
-      .setName("pandoc-crossref path")
-      .setDesc("pandoc-crossref 可执行文件路径，需自行下载安装。如 D:/tools/pandoc-crossref.exe")
+    // Shared settings below columns
+    xrefContainer.createEl("hr");
+
+    new Setting(xrefContainer)
+      .setName("Chapter delimiter")
+      .setDesc("章节分隔符（如 '.'、'-'）")
       .addText((text) =>
         text
-          .setPlaceholder("(空=不使用)")
-          .setValue(this.plugin.settings.crossref.crossrefFilterPath)
-          .onChange(async (value) => {
-            this.plugin.settings.crossref.crossrefFilterPath = value;
+          .setPlaceholder(".")
+          .setValue(this.plugin.settings.crossref.chapDelim)
+          .onChange(async (val) => {
+            this.plugin.settings.crossref.chapDelim = val;
+            this.plugin.settings.crossrefEn.chapDelim = val;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(xrefContainer)
+      .setName("Auto section labels")
+      .setDesc("自动为章节生成标签（用于交叉引用）")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.crossref.autoSectionLabels)
+          .onChange(async (val) => {
+            this.plugin.settings.crossref.autoSectionLabels = val;
+            this.plugin.settings.crossrefEn.autoSectionLabels = val;
             await this.plugin.saveSettings();
           })
       );
   }
 
-  private crossrefFields(container: HTMLElement, target: CrossrefOptions, isEnglish: boolean) {
+  private xrefColumn(container: HTMLElement, target: CrossrefOptions, isEnglish: boolean) {
     const f = isEnglish ? 'Fig.' : '图';
     const t = isEnglish ? 'Tab.' : '表';
     const e = isEnglish ? 'Eq.' : '式';
     const fTitle = isEnglish ? 'Figure' : '图';
     const tTitle = isEnglish ? 'Table' : '表';
     const eTitle = isEnglish ? 'Equation' : '式';
-    const fields: [string, keyof CrossrefOptions, string][] = [
+
+    container.createEl("h6", { text: "— 正文引用前缀 —", attr: { style: "margin:8px 0 4px;color:var(--text-muted);" } });
+    const prefixFields: [string, keyof CrossrefOptions, string][] = [
       ['Figure prefix', 'figPrefix', f],
       ['Table prefix', 'tblPrefix', t],
       ['Equation prefix', 'eqnPrefix', e],
+    ];
+    for (const [label, key, ph] of prefixFields) {
+      new Setting(container)
+        .setName(label)
+        .addText((text) =>
+          text.setPlaceholder(ph).setValue(String(target[key] || '')).onChange(async (val) => {
+            target[key] = val as any;
+            await this.plugin.saveSettings();
+          })
+        );
+    }
+
+    container.createEl("h6", { text: "— 题注标题 —", attr: { style: "margin:12px 0 4px;color:var(--text-muted);" } });
+    const titleFields: [string, keyof CrossrefOptions, string][] = [
       ['Figure title', 'figureTitle', fTitle],
       ['Table title', 'tableTitle', tTitle],
       ['Equation title', 'equationTitle', eTitle],
-      ['Chapter delimiter', 'chapDelim', '.'],
-      ['Auto section labels', 'autoSectionLabels', ''],
     ];
-    for (const [label, key, ph] of fields) {
-      if (key === 'autoSectionLabels') {
-        new Setting(container)
-          .setName(label)
-          .addToggle((toggle) =>
-            toggle
-              .setValue(Boolean(target[key]))
-              .onChange(async (val) => {
-                target[key] = val as any;
-                await this.plugin.saveSettings();
-              })
-          );
-      } else {
-        new Setting(container)
-          .setName(label)
-          .addText((text) =>
-            text
-              .setPlaceholder(ph)
-              .setValue(String(target[key] || ''))
-              .onChange(async (val) => {
-                target[key] = val as any;
-                await this.plugin.saveSettings();
-              })
-          );
-      }
+    for (const [label, key, ph] of titleFields) {
+      new Setting(container)
+        .setName(label)
+        .addText((text) =>
+          text.setPlaceholder(ph).setValue(String(target[key] || '')).onChange(async (val) => {
+            target[key] = val as any;
+            await this.plugin.saveSettings();
+          })
+        );
     }
   }
 }
