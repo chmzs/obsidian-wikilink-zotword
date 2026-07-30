@@ -89,7 +89,7 @@ As shown in @eq:quadratic, ...
 > - `@tbl:name` → `Tab. N` (reference a table)
 > - `@eq:name` → `Eq. N` (reference an equation)
 > - **Label naming**: `a-zA-Z0-9-` only, use `-` between words (e.g. `{#fig:temp-curve}`), **no underscores**
-> - **Sub-figure**: share label, append `-a` `-b` suffix: `@fig:name-a` → `Fig. 1a`
+> - **Sub-figure**: share label, append space + letter: `@fig:name a` → `Fig. 1a` (footnotes export auto-removes space, Word export uses wildcard)
 > - Prefixes are customizable in settings
 > - YAML frontmatter: `crossref_lang: zh` or `crossref_lang: en` to switch presets
 > - Requires [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) — set the executable path in settings
