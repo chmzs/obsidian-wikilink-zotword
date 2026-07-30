@@ -267,7 +267,7 @@ export function resolveCrossrefs(content: string, options?: {
  * Handles: YAML frontmatter removal, image embeds, figure/table callouts,
  * wikilink conversion, callout→blockquote, heading shift.
  */
-function applyMarkdownTransformations(content: string, skipWikilinkConversion = false): string {
+function applyMarkdownTransformations(content: string, skipWikilinkConversion = false, footnotesMode = false): string {
   // Normalize line endings first
   let result = content.replace(/\r\n/g, '\n');
 
@@ -322,6 +322,12 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
         .join('\n');
       const imgMatch = imageSyntax.match(/!\[([^\]]*)\]\(([^)]+)\)/);
       const imgUrl = imgMatch ? imgMatch[2] : imageSyntax;
+      if (footnotesMode) {
+        const captionBold = `**${captionText.trim()}**`;
+        const annotationHtml = annotation
+          ? `\n<span style="color:#888">${annotation}</span>\n` : '';
+        return `<div align="center">\n\n![](${imgUrl})\n\n${captionBold}${annotationHtml}\n</div>`;
+      }
       let r = '![' + captionText.trim() + '](' + imgUrl + '){#' + figLabel + '}';
       if (annotation) {
         r += '\n\n' + annotation;
@@ -363,12 +369,20 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
         i++;
       }
 
-      processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
-      processedLines.push('');
-      processedLines.push(...tableLines);
-      if (annotationLines.length > 0) {
+      if (footnotesMode) {
+        const captionBold = `**${caption}**`;
+        const tableStr = tableLines.join('\n');
+        const annotationStr = annotationLines.length > 0
+          ? `\n<span style="color:#888">${annotationLines.join('\n')}</span>` : '';
+        processedLines.push(captionBold, '', tableStr, annotationStr);
+      } else {
+        processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
         processedLines.push('');
-        processedLines.push(...annotationLines);
+        processedLines.push(...tableLines);
+        if (annotationLines.length > 0) {
+          processedLines.push('');
+          processedLines.push(...annotationLines);
+        }
       }
     } else {
       processedLines.push(lines[i]);
@@ -664,5 +678,5 @@ export async function exportToMarkdownFootnotes(
  * Clean up markdown: convert wikilinks to plain text, handle images, etc.
  */
 function cleanMarkdown(content: string): string {
-  return applyMarkdownTransformations(content).trim() + '\n';
+  return applyMarkdownTransformations(content, false, true).trim() + '\n';
 }
