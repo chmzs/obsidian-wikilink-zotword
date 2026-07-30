@@ -605,7 +605,6 @@ export async function exportToMarkdownFootnotes(
       } else {
         ref += '.';
       }
-      if (doi) ref += ` <https://doi.org/${doi}>`;
       bibEntries[citekey] = ref;
     }
 
