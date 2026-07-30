@@ -89,11 +89,28 @@ As shown in @eq:quadratic, ...
 > - `@tbl:name` → `Tab. N` (reference a table)
 > - `@eq:name` → `Eq. N` (reference an equation)
 > - **Label naming**: `a-zA-Z0-9-` only, use `-` between words (e.g. `{#fig:temp-curve}`), **no underscores**
-> - **Sub-figure**: share label, append `_a` `_b` suffix: `@fig:name_a` → `Fig. N a`
+> - **Sub-figure**: share label, append `-a` `-b` suffix: `@fig:name-a` → `Fig. 1a`
 > - Prefixes are customizable in settings
 > - YAML frontmatter: `crossref_lang: zh` or `crossref_lang: en` to switch presets
 > - Requires [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) — set the executable path in settings
 > - **Easy Typing users**: if `{#fig:label}` gets auto-spaced, add `\{#[\w\-:]+\}|--` as the first line in Easy Typing settings → Auto Formatting → User Custom Regex Blocks
+
+### Fix sub-figure spacing in Word after export
+
+Word exports include a space between figure number and suffix (e.g., `Fig. 1 a`), use Word's Find and Replace to batch fix:
+
+1. `Ctrl+H` → check **"Use wildcards"**
+2. **Find**: `(Fig\.|Figure|Table|Eq\.|Equation|图|表|式) ([0-9]{1,}) ([a-zA-Z])`
+3. **Replace**: `\1 \2\3`
+4. Click **Replace All**
+
+Result: `Fig. 1 a` → `Fig. 1a`
+
+> [!note] Word wildcard notes
+> - Digits: `[0-9]` (not `\d`)
+> - Letters: `[a-zA-Z]` (not `\w`)
+> - Quantifiers: `{1,}` (not `+`)
+> - Capture groups: `\1` `\2` (not `$1` `$2`)
 
 ## Markdown footnotes export
 
