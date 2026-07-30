@@ -242,18 +242,22 @@ export function resolveCrossrefs(content: string, options?: {
     tbl: options?.tblPrefix || 'Tab.',
     eq: options?.eqnPrefix || 'Eq.',
   };
-  return content.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\b/g, (_m, type, label) => {
-    let key = `${type}:${label}`;
-    let num = counts[key];
-    if (!num) {
-      const sub = label.match(/^(.+)-([a-z])$/);
-      if (sub) {
-        key = `${type}:${sub[1]}`;
-        num = counts[key];
-        if (num) return `${pref[type]} ${num}${sub[2]}`;
-      }
-    }
+  let result = content.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\b/g, (_m, type, label) => {
+    const key = `${type}:${label}`;
+    const num = counts[key];
     if (num) return `${pref[type]} ${num}`;
+    return _m;
+  });
+  // Fix sub-figure spacing: Fig. 1 a → Fig. 1a
+  result = result.replace(/(图|表|式|Fig\.|Fig|Tab\.|Tab|Eq\.|Eq|Figure|Table|Equation) (\d+) ([a-z])/g,
+    '$1 $2$3'
+  );
+  return result;
+  // Sub-figure with space: @fig:name a → Fig. 1a
+  result = result.replace(/@(fig|tbl|eq):([\w-]+) ([a-z])\b/g, (_m, type, name, suffix) => {
+    const key = `${type}:${name}`;
+    const num = counts[key];
+    if (num) return `${pref[type]} ${num}${suffix}`;
     return _m;
   });
 }

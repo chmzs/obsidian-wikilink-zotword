@@ -97,20 +97,21 @@ As shown in @eq:quadratic, ...
 
 ### Fix sub-figure spacing in Word after export
 
-Word exports include a space between figure number and suffix (e.g., `Fig. 1 a`), use Word's Find and Replace to batch fix:
+Word exports include a space between figure number and suffix (e.g., `Fig. 1 a`, `图 1 a`). Word wildcards **don't support `|` (OR)**, so do **separate Find & Replace per prefix**:
 
-1. `Ctrl+H` → check **"Use wildcards"**
-2. **Find**: `(Fig\.|Figure|Table|Eq\.|Equation|图|表|式) ([0-9]{1,}) ([a-zA-Z])`
-3. **Replace**: `\1 \2\3`
-4. Click **Replace All**
+**Examples**:
+- **Chinese**: Find `图 ([0-9]@) ([a-z])` → Replace `图 \1\2`
+- **English**: Find `Fig\. ([0-9]@) ([a-z])` → Replace `Fig. \1\2`
+- **English**: Find `Figure ([0-9]@) ([a-z])` → Replace `Figure \1\2`
 
-Result: `Fig. 1 a` → `Fig. 1a`
+Other prefixes (`表/式/Table/Eq./Equation`) — same pattern, repeat per prefix.
 
-> [!note] Word wildcard notes
-> - Digits: `[0-9]` (not `\d`)
-> - Letters: `[a-zA-Z]` (not `\w`)
-> - Quantifiers: `{1,}` (not `+`)
-> - Capture groups: `\1` `\2` (not `$1` `$2`)
+> [!note] Word wildcard syntax notes
+> - Digits: `[0-9]@` (`@` = 1+ occurrences of previous, NOT `\d`, `+`, `{1,}`)
+> - Letters: `[a-z]` or `[a-zA-Z]` (NOT `\w`)
+> - Capture groups: `\1` `\2` (NOT `$1` `$2`)
+> - **No `|` (OR) support** — do separate passes per prefix
+> - Literal dot needs escape: `Fig\.`, `Eq\.`
 
 ## Markdown footnotes export
 
