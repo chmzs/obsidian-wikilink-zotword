@@ -229,6 +229,7 @@ Not yet — planned for v0.3.
 - **v0.4** — Multiple export formats (e.g., [obsidian-enhancing-export](https://github.com/mokeyish/obsidian-enhancing-export), [obsidian-better-export-pdf](https://github.com/l1xnan/obsidian-better-export-pdf))
 - **v0.5** — Cite-as-you-write: search Zotero from command palette → insert wikilink
 - **v0.6** — Batch export multiple notes + progress bar
+- **v0.7** — Refactor: split preprocessor.ts into markdown.ts / word-export.ts / footnotes-export.ts
 
 ## Development
 

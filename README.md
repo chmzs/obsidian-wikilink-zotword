@@ -233,6 +233,7 @@ BBT 模式需配置 `citekeyUnsafeChars`（见上文配置指南）并重新生�
 - **v0.4** — 多种导出格式支持（https://github.com/mokeyish/obsidian-enhancing-export、https://github.com/l1xnan/obsidian-better-export-pdf）
 - **v0.5** — 边写边引：命令面板搜索 Zotero 文献 → 插入 wikilink
 - **v0.6** — 批量导出多个笔记 + 导出进度条
+- **v0.7** — 代码重构：将 preprocessor.ts 拆分为 markdown.ts / word-export.ts / footnotes-export.ts
   
 ## 开发
 
