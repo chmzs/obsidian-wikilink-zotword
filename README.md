@@ -249,6 +249,7 @@ npm run test     # 运行测试
 - [Zotero One](https://weixin.qq.com/sph/AE3FgkpLTt) — 打通 Zotero 与 Obsidian
 - [pandoc-crossref](https://github.com/tomduck/pandoc-crossref) — 图表公式交叉引用
 - [Pandoc](https://pandoc.org/) — 文档格式转换引擎
+- [Obsidian for paper](https://medium.com/better-humans/obsidian-tutorial-for-academic-writing-87b038060522) — Obsidian学术写作教程
 
 ## License
 

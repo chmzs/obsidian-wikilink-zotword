@@ -228,7 +228,8 @@ npm run test     # Run tests
 - [Zotero One](https://weixin.qq.com/sph/AE3FgkpLTt) — Bridges Zotero and Obsidian
 - [pandoc-crossref](https://github.com/tomduck/pandoc-crossref) — Figure/table/equation cross-references
 - [Pandoc](https://pandoc.org/) — Universal document converter
-
+- [Obsidian for paper](https://medium.com/better-humans/obsidian-tutorial-for-academic-writing-87b038060522) — Obsidian Tutorial for Academic Writing
+  
 ## License
 
 MIT
