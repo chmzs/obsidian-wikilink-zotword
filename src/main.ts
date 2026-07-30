@@ -79,6 +79,11 @@ export default class ZoteroExportPlugin extends Plugin {
         }
       }
     }
+    // Migrate crossrefFilterPath from old crossref object to top-level
+    if (!this.settings.crossrefFilterPath) {
+      const oldPath = (saved.crossref as any)?.crossrefFilterPath || (saved.crossrefEn as any)?.crossrefFilterPath;
+      if (oldPath) this.settings.crossrefFilterPath = oldPath;
+    }
   }
 
   async saveSettings() {
@@ -128,7 +133,7 @@ export default class ZoteroExportPlugin extends Plugin {
       fs.writeFileSync(tmpMd, preprocessed, "utf-8");
 
       // 5. Run Pandoc
-      const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
+      const crossrefFilterPath = this.settings.crossrefFilterPath || undefined;
 
       const pandocArgs = buildPandocArgs(
         tmpMd,
@@ -218,7 +223,7 @@ export default class ZoteroExportPlugin extends Plugin {
       }
 
       // 2. Run markdown footnotes conversion
-      const crossrefFilterPath = this.settings.crossref.crossrefFilterPath || undefined;
+      const crossrefFilterPath = this.settings.crossrefFilterPath || undefined;
       const yamlOverrides2 = parseCrossrefOverrides(content, this.settings);
       const crossrefOptions2 = { ...this.settings.crossref, ...yamlOverrides2 };
       const result = await exportToMarkdownFootnotes(

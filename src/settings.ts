@@ -12,7 +12,6 @@ export interface CrossrefOptions {
   equationTitle: string;
   chapDelim: string;
   autoSectionLabels: boolean;
-  crossrefFilterPath: string;
 }
 
 export interface ZoteroExportSettings {
@@ -20,8 +19,9 @@ export interface ZoteroExportSettings {
   outputDir: string;
   templatePath: string;
   exportMode: ExportMode;
-  crossref: CrossrefOptions;       // 中文版
-  crossrefEn: CrossrefOptions;     // 英文版
+  crossref: CrossrefOptions;
+  crossrefEn: CrossrefOptions;
+  crossrefFilterPath: string;    // pandoc-crossref 路径（语言无关）
   cslStyleFile: string;
 }
 
@@ -39,7 +39,6 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
     equationTitle: "式",
     chapDelim: "-",
     autoSectionLabels: true,
-    crossrefFilterPath: "",
   },
   crossrefEn: {
     figPrefix: "Fig.",
@@ -50,8 +49,8 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
     equationTitle: "Equation",
     chapDelim: ".",
     autoSectionLabels: true,
-    crossrefFilterPath: "",
   },
+  crossrefFilterPath: "",
   cslStyleFile: "apa",
 };
 
@@ -156,9 +155,9 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder("(空=不使用)")
-          .setValue(this.plugin.settings.crossref.crossrefFilterPath)
+          .setValue(this.plugin.settings.crossrefFilterPath)
           .onChange(async (value) => {
-            this.plugin.settings.crossref.crossrefFilterPath = value;
+            this.plugin.settings.crossrefFilterPath = value;
             await this.plugin.saveSettings();
           })
       );
