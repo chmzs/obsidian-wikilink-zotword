@@ -285,24 +285,12 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     }
     const isSize = /^\d+$/.test(param.trim());
     if (isSize) {
-      return '![](' + file + '){ width=' + param.trim() + ' }';
+      return footnotesMode ? '![](' + file + ')' : '![](' + file + '){ width=' + param.trim() + ' }';
     }
     const figLabel = path.basename(file, path.extname(file))
       .replace(/\s+/g, '-')
       .replace(/[^\w-]/g, '');
     return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
-  });
-
-  // Standard markdown syntax: ![alt|size](URL) or ![alt](URL)
-  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, alt, size, url) => {
-    return '![' + alt + '](' + url + '){ width=' + size + ' }';
-  });
-  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (match, alt, url) => {
-    if (!alt.trim()) return match;
-    const figLabel = path.basename(url, path.extname(url))
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '');
-    return '![' + alt.trim() + '](' + url + '){#fig:' + figLabel + '}';
   });
 
   // 1b. Convert figure callouts to pandoc figure with caption + annotation
@@ -325,8 +313,8 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
       if (footnotesMode) {
         const captionBold = `**${captionText.trim()}**`;
         const annotationHtml = annotation
-          ? `\n<span style="color:#888">${annotation}</span>\n` : '';
-        return `<div align="center">\n\n![](${imgUrl})\n\n${captionBold}${annotationHtml}\n</div>`;
+          ? `\n\n<span style="color:#888">${annotation}</span>\n` : '';
+        return `![](${imgUrl})\n\n${captionBold}${annotationHtml}`;
       }
       let r = '![' + captionText.trim() + '](' + imgUrl + '){#' + figLabel + '}';
       if (annotation) {
@@ -390,6 +378,16 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     }
   }
   result = processedLines.join('\n');
+
+  // 1d. Standard markdown images (AFTER callouts processed)
+  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, alt, size, url) => {
+    return footnotesMode ? '![' + alt + '](' + url + ')' : '![' + alt + '](' + url + '){ width=' + size + ' }';
+  });
+  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (match, alt, url) => {
+    if (!alt.trim()) return match;
+    const figLabel = path.basename(url, path.extname(url)).replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+    return '![' + alt.trim() + '](' + url + '){#fig:' + figLabel + '}';
+  });
 
   // 2. Convert regular wikilinks to plain text
   if (!skipWikilinkConversion) {
