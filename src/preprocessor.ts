@@ -379,16 +379,6 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
   }
   result = processedLines.join('\n');
 
-  // 1d. Standard markdown images (AFTER callouts processed)
-  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, alt, size, url) => {
-    return footnotesMode ? '![' + alt + '](' + url + ')' : '![' + alt + '](' + url + '){ width=' + size + ' }';
-  });
-  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (match, alt, url) => {
-    if (!alt.trim()) return match;
-    const figLabel = path.basename(url, path.extname(url)).replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-    return '![' + alt.trim() + '](' + url + '){#fig:' + figLabel + '}';
-  });
-
   // 2. Convert regular wikilinks to plain text
   if (!skipWikilinkConversion) {
     result = result.replace(/\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (match, page, display) => {
