@@ -39,6 +39,7 @@ jobs:
             dist/main.js
             dist/manifest.json
             dist/styles.css
+            dist/versions.json
             dist/filters/zotero-bbt.lua
             dist/filters/zotero-lite.lua
 
@@ -62,6 +63,7 @@ jobs:
             dist/main.js
             dist/manifest.json
             dist/styles.css
+            dist/versions.json
             dist/filters/zotero-bbt.lua
             dist/filters/zotero-lite.lua
           generate_release_notes: true

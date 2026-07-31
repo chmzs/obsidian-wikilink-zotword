@@ -12,6 +12,7 @@ export interface CrossrefOptions {
   equationTitle: string;
   chapDelim: string;
   autoSectionLabels: boolean;
+  lang?: 'zh' | 'en';
 }
 
 export interface ZoteroExportSettings {

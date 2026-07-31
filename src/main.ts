@@ -28,12 +28,16 @@ function parseCrossrefOverrides(content: string, settings: ZoteroExportSettings)
   if (!match) return overrides;
 
   if (/^crossref_lang:\s*en$/m.test(match[1])) {
+    overrides.lang = 'en';
     const en = settings.crossrefEn;
     if (en) {
       for (const key of ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const) {
         (overrides as any)[key] = (en as any)[key];
       }
     }
+  } else {
+    // Default to Chinese
+    overrides.lang = 'zh';
   }
   return overrides;
 }

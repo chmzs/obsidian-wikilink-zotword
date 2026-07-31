@@ -5,6 +5,8 @@ import {
   extractCitations,
   preprocessMarkdown,
   buildPandocArgs,
+  applyMarkdownTransformations,
+  resolveCrossrefs,
 } from '../src/preprocessor';
 
 describe('wikilinkToCitekey', () => {
@@ -281,4 +283,82 @@ describe('buildPandocArgs', () => {
   });
 
 
+});
+
+describe('applyMarkdownTransformations - footnotesMode', () => {
+  it('converts figure callout to HTML format', () => {
+    const content = `> [!figure] Temperature reconstruction {#fig:temp-curve}
+> Source: compiled from multiple studies
+> ![|100](https://example.com/image.jpg)`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('<center><img src = "https://example.com/image.jpg" width = "100 px"/></center>');
+    expect(result).toContain('<center><b>图 1 Temperature reconstruction</b></center>');
+    expect(result).toContain('<center><font color="#595959">Source: compiled from multiple studies</font></center>');
+  });
+
+  it('converts figure callout without width', () => {
+    const content = `> [!figure] Test Figure
+> Note text
+> ![](https://example.com/image.jpg)`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('<center><img src = "https://example.com/image.jpg"/></center>');
+    expect(result).toContain('<center><b>图 1 Test Figure</b></center>');
+  });
+
+  it('converts table callout to HTML format', () => {
+    const content = `> [!table] Proxy comparison {#tbl:proxies}
+> Note text
+>
+> | Proxy | Signal |
+> |-------|--------|`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('<center>表1 Proxy comparison</center>');
+    expect(result).toContain('| Proxy | Signal |');
+    expect(result).toContain('<center><font color="#595959">Note text</font></center>');
+  });
+
+  it('converts equation to \\tag format', () => {
+    const content = '$$y = ax^2 + bx + c$$ {#eq:quadratic}';
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('$$y = ax^2 + bx + c \\tag{式 1}$$');
+    expect(result).not.toContain('{#eq:quadratic}');
+  });
+
+  it('assigns sequential numbers to equations', () => {
+    const content = `$$a$$ {#eq:first}
+$$b$$ {#eq:second}`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('\\tag{式 1}');
+    expect(result).toContain('\\tag{式 2}');
+  });
+});
+
+describe('resolveCrossrefs - Chinese format', () => {
+  it('replaces @fig with 图 in Chinese mode', () => {
+    const content = '{#fig:test} shown in @fig:test.';
+    const result = resolveCrossrefs(content, { lang: 'zh' });
+    expect(result).toContain('图 1');
+    expect(result).not.toContain('@fig:test');
+  });
+
+  it('replaces @tbl with 表 (no space) in Chinese mode', () => {
+    const content = '{#tbl:test} shown in @tbl:test.';
+    const result = resolveCrossrefs(content, { lang: 'zh' });
+    expect(result).toContain('表1');
+    expect(result).not.toContain('@tbl:test');
+  });
+
+  it('replaces @eq with 式 in Chinese mode', () => {
+    const content = '{#eq:test} shown in @eq:test.';
+    const result = resolveCrossrefs(content, { lang: 'zh' });
+    expect(result).toContain('式 1');
+    expect(result).not.toContain('@eq:test');
+  });
+
+  it('handles sub-figure suffix', () => {
+    const content = '{#fig:test} shown in @fig:test a and @fig:test b.';
+    const result = resolveCrossrefs(content, { lang: 'zh' });
+    expect(result).toContain('图 1a');
+    expect(result).toContain('图 1b');
+  });
 });

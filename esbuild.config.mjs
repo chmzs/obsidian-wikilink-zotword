@@ -39,6 +39,7 @@ esbuild
       copyFileSync("main.js", "dist/main.js");
       copyFileSync("manifest.json", "dist/manifest.json");
       copyFileSync("styles.css", "dist/styles.css");
+      copyFileSync("versions.json", "dist/versions.json");
       cpSync("filters", "dist/filters", { recursive: true });
       console.log("Plugin files copied to dist/");
     }

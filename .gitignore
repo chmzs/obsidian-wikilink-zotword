@@ -4,6 +4,9 @@ node_modules/
 # Build output
 dist/
 
+# Packaged releases (CI generates these)
+*.zip
+
 # AI assistant config
 CLAUDE.md
 

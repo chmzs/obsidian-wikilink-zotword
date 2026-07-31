@@ -92,9 +92,8 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 > - `@eq:name` → `式 N`（引用公式）
 > - **标签名规则**：仅允许 `a-zA-Z0-9-`，用 `-` 连接单词（如 `{#fig:temp-curve}`），**不允许下划线**
 > - **子图**：同一图多个子图共享标签名，引用加空格+字母：`@fig:name a` → `图 1a`（脚注导出自动去空格，Word 导出手动去空格）
-> - 前缀可在设置中自定义（如改为 `Fig.`、`Tab.`、`Eq.`）
-> - 文档 YAML 用 `crossref_lang: zh` / `crossref_lang: en` 切换中英文预设
-> - 需安装 [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases)，在设置中填入可执行文件路径
+> - **前缀继承**：使用 `图`、`表`、`式` 还是 `Fig.`、`Tab.`、`Eq.`，由设置中的前缀（Figure/Table/Equation prefix）控制，文档 YAML 用 `crossref_lang: zh` / `crossref_lang: en` 切换中英文预设
+> - Word 导出需安装 [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases)，在设置中填入可执行文件路径
 > - **Easy Typing 用户**：若 `{#fig:label}` 被自动加空格，在 Easy Typing 设置 → 自动格式化 → 用户自定义正则表达式区块首行添加 `\{#[\w\-:]+\}|--`
 
 ### Word 导出后批量修正子图空格
@@ -126,14 +125,34 @@ Word 导出后子图引用会有空格（如 `Fig. 1 a`、`图 1 a`），需**�
 输出效果：
 
 ```markdown
-近年来该领域研究取得重要进展（(Smith et al., 2024)[^1]），
-如 @fig:1 和 @tbl:1 所示。
+## 图表题注（HTML 格式）
+
+<center><img src = "图片路径" width = "100 px"/></center>
+<center><b>图 1 实验结果对比</b></center>
+<center><font color="#595959">说明文字</font></center>
+
+如 图 1 所示，……
+
+<center>表1 参数对比</center>
+
+| 参数 | 说明 |
+|------|------|
+| A | 描述1 |
+
+<center><font color="#595959">数据来源：综合文献</font></center>
+
+如 表1 所示，……
+
+$$y = ax^2 + bx + c \tag{式 1}$$
+如 式 1 所示，……
 
 ## 参考文献
-[^1]: Smith, J., et al. (2024). A study on...
-     *Journal of Example Studies*, 12(3), 456-478.
+[^1]: 张三, 李四. (2024). 一项研究. *示例学报*, 12(3), 456-478.
 ```
 
+- **图表题注**：图片、表格、公式题注转换为 HTML 格式，居中显示，编号自动生成（图 1、表1、式 1）
+- **交叉引用**：`@fig:name`、`@tbl:name`、`@eq:name` 自动替换为对应的编号
+- **标题等级**：保持源文档的标题等级（`##` 不变）
 - 正文：`作者 (年份)[^n]`（作者年份制）
 - 文末：完整参考文献（含 DOI）
 - 无需 BBT，仅需 Zotero 运行

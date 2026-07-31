@@ -90,9 +90,8 @@ As shown in @eq:quadratic, ...
 > - `@eq:name` → `Eq. N` (reference an equation)
 > - **Label naming**: `a-zA-Z0-9-` only, use `-` between words (e.g. `{#fig:temp-curve}`), **no underscores**
 > - **Sub-figure**: share label, append space + letter: `@fig:name a` → `Fig. 1a` (footnotes export auto-removes space, Word export uses wildcard)
-> - Prefixes are customizable in settings
-> - YAML frontmatter: `crossref_lang: zh` or `crossref_lang: en` to switch presets
-> - Requires [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) — set the executable path in settings
+> - **Prefix inheritance**: Whether to use `图`/`表`/`式` or `Fig.`/`Tab.`/`Eq.` is controlled by the Figure/Table/Equation prefix settings; set `crossref_lang: zh` or `crossref_lang: en` in YAML frontmatter to switch presets
+> - Word export requires [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) — set the executable path in settings
 > - **Easy Typing users**: if `{#fig:label}` gets auto-spaced, add `\{#[\w\-:]+\}|--` as the first line in Easy Typing settings → Auto Formatting → User Custom Regex Blocks
 
 ### Fix sub-figure spacing in Word after export
@@ -124,14 +123,34 @@ Ideal for WeChat, blogs, Notion, and other Markdown publishing platforms.
 Output example:
 
 ```markdown
-Recent studies have made significant progress (Smith et al., 2024)[^1]),
-as shown in @fig:1 and @tbl:1.
+## Figure/table captions (HTML format)
+
+<center><img src = "image-path" width = "100 px"/></center>
+<center><b>Fig. 1 Experimental results comparison</b></center>
+<center><font color="#595959">Description text</font></center>
+
+As shown in Fig. 1, ...
+
+<center>Table 1 Parameter comparison</center>
+
+| Parameter | Description |
+|-----------|-------------|
+| A | Description 1 |
+
+<center><font color="#595959">Source: compiled from literature</font></center>
+
+As shown in Table 1, ...
+
+$$y = ax^2 + bx + c \tag{Eq. 1}$$
+As shown in Eq. 1, ...
 
 ## References
-[^1]: Smith, J., et al. (2024). A study on...
-     *Journal of Example Studies*, 12(3), 456-478.
+[^1]: Smith, J. (2024). A study on... *Journal of Example Studies*, 12(3), 456-478.
 ```
 
+- **Figure/table captions**: Converted to centered HTML format with auto-numbering (Fig. 1, Table 1, Eq. 1)
+- **Cross-references**: `@fig:name`, `@tbl:name`, `@eq:name` are replaced with corresponding numbers
+- **Heading levels**: Preserved from the source document (`##` stays unchanged)
 - In-text: `Author (Year)[^n]` (author-year format)
 - At end: Full references with DOI
 - No BBT required — only Zotero needs to be running

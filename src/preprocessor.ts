@@ -225,41 +225,65 @@ export function buildPandocArgs(
 /**
  * Resolve cross-references (@fig:xxx, @tbl:xxx, @eq:xxx → prefix + number).
  * Scans for {#fig:xxx} labels, assigns sequential numbers, replaces references.
+ *
+ * @param lang - 'zh' for Chinese format (图 1, 表1, 式 1), 'en' for English (Fig. 1, Tab. 1, Eq. 1)
  */
 export function resolveCrossrefs(content: string, options?: {
   figPrefix?: string; tblPrefix?: string; eqnPrefix?: string;
+  lang?: 'zh' | 'en';
 }): string {
-  const counts: Record<string, number> = {};
-  const counters = { fig: 0, tbl: 0, eq: 0 };
+  const lang = options?.lang || 'en';
+
+  // Build prefix map based on language
+  const pref: Record<string, string> = {
+    fig: lang === 'zh' ? '图' : (options?.figPrefix || 'Fig.'),
+    tbl: lang === 'zh' ? '表' : (options?.tblPrefix || 'Tab.'),
+    eq: lang === 'zh' ? '式' : (options?.eqnPrefix || 'Eq.'),
+  };
+
+  // Build sequential number map: fig:temp-curve -> 1, fig:temp-curve2 -> 2, etc.
+  const numberMap: Record<string, number> = {};
+  const numberCounters = { fig: 0, tbl: 0, eq: 0 };
   const labelPat = /\{#(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\}/g;
   let m;
   while ((m = labelPat.exec(content)) !== null) {
     const key = `${m[1]}:${m[2]}`;
-    if (!counts[key]) counts[key] = ++counters[m[1] as keyof typeof counters];
+    if (!numberMap[key]) {
+      numberCounters[m[1] as keyof typeof numberCounters]++;
+      numberMap[key] = numberCounters[m[1] as keyof typeof numberCounters];
+    }
   }
-  const pref: Record<string, string> = {
-    fig: options?.figPrefix || 'Fig.',
-    tbl: options?.tblPrefix || 'Tab.',
-    eq: options?.eqnPrefix || 'Eq.',
-  };
-  let result = content.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\b/g, (_m, type, label) => {
+
+  // Replace @fig:xxx references with prefix + number
+  // Handle sub-figure suffix: @fig:xxx a -> 图 1a
+  let result = content.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\s+([a-z])\b/g, (_m, type, label, suffix) => {
     const key = `${type}:${label}`;
-    const num = counts[key];
-    if (num) return `${pref[type]} ${num}`;
+    const num = numberMap[key];
+    if (num) {
+      // Chinese: 表1a (no space), English/Eq: Fig. 1a, Eq. 1a
+      if (type === 'tbl' && lang === 'zh') {
+        return `${pref[type]}${num}${suffix}`;
+      }
+      return `${pref[type]} ${num}${suffix}`;
+    }
     return _m;
   });
-  // Fix sub-figure spacing: Fig. 1 a → Fig. 1a
-  result = result.replace(/(图|表|式|Fig\.|Fig|Tab\.|Tab|Eq\.|Eq|Figure|Table|Equation) (\d+) ([a-z])/g,
-    '$1 $2$3'
-  );
+
+  // Replace remaining @fig:xxx references (without suffix)
+  result = result.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\b/g, (_m, type, label) => {
+    const key = `${type}:${label}`;
+    const num = numberMap[key];
+    if (num) {
+      // Chinese: 表1 (no space), English/Eq: Fig. 1, Eq. 1
+      if (type === 'tbl' && lang === 'zh') {
+        return `${pref[type]}${num}`;
+      }
+      return `${pref[type]} ${num}`;
+    }
+    return _m;
+  });
+
   return result;
-  // Sub-figure with space: @fig:name a → Fig. 1a
-  result = result.replace(/@(fig|tbl|eq):([\w-]+) ([a-z])\b/g, (_m, type, name, suffix) => {
-    const key = `${type}:${name}`;
-    const num = counts[key];
-    if (num) return `${pref[type]} ${num}${suffix}`;
-    return _m;
-  });
 }
 
 /**
@@ -267,7 +291,12 @@ export function resolveCrossrefs(content: string, options?: {
  * Handles: YAML frontmatter removal, image embeds, figure/table callouts,
  * wikilink conversion, callout→blockquote, heading shift.
  */
-function applyMarkdownTransformations(content: string, skipWikilinkConversion = false, footnotesMode = false): string {
+export function applyMarkdownTransformations(
+  content: string,
+  skipWikilinkConversion = false,
+  footnotesMode = false,
+  crossrefOptions?: { figPrefix?: string; tblPrefix?: string; eqnPrefix?: string }
+): string {
   // Normalize line endings first
   let result = content.replace(/\r\n/g, '\n');
 
@@ -293,29 +322,64 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
   });
 
+  // 1a. Convert standard markdown images with caption/size to crossref format
+  // Pattern: ![caption|size](file) -> ![caption](file){ width=size } or ![caption](file){#fig:xxx}
+  result = result.replace(/!\[([^\]]*?)\|(\d+)\]\(([^)]+)\)/g, (_match, caption, size, file) => {
+    if (!caption) {
+      // In footnotes mode, preserve size info as {width=N} for later processing
+      if (footnotesMode) {
+        return '![](' + file + '){width=' + size + '}';
+      }
+      return '![](' + file + '){ width=' + size + ' }';
+    }
+    return '![' + caption + '](' + file + '){ width=' + size + ' }';
+  });
+
+  // Pattern: ![caption](file) -> ![caption](file){#fig:xxx} (add fig label if caption is not empty)
+  result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (_match, caption, file) => {
+    if (caption && !caption.startsWith(' ')) {
+      const figLabel = path.basename(file, path.extname(file))
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]/g, '');
+      return '![' + caption + '](' + file + '){#fig:' + figLabel + '}';
+    }
+    return _match;
+  });
+
   // 1b. Convert figure callouts to pandoc figure with caption + annotation
   let figCounter = 0;
   result = result.replace(
-    /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\))\s*$/gm,
+    /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\)(?:\{[^}]+\})?)\s*$/gm,
     (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
       figCounter++;
       // Extract optional custom label {#fig:xxx} from caption
       const labelMatch = caption.match(/\{#([\w:-]+)\}$/);
-      const figLabel = labelMatch ? labelMatch[1] : 'fig:' + figCounter;
       const captionText = labelMatch ? caption.replace(/\s*\{#[\w:-]+\}$/, '') : caption;
+      const figLabel = 'fig:' + figCounter;
       const annotation = annotationBlock
         .split('\n')
         .map((line: string) => line.replace(/^>\s?/, '').trim())
         .filter((line: string) => line !== '')
         .join('\n');
+      // Extract URL from image syntax (may have > prefix from blockquote)
       const imgMatch = imageSyntax.match(/!\[([^\]]*)\]\(([^)]+)\)/);
       const imgUrl = imgMatch ? imgMatch[2] : imageSyntax;
+
       if (footnotesMode) {
-        const captionBold = `**${captionText.trim()}**`;
-        const annotationHtml = annotation
-          ? `\n\n<span style="color:#888">${annotation}</span>\n` : '';
-        return `![](${imgUrl})\n\n${captionBold}${annotationHtml}`;
+        // HTML format for footnotes export
+        // Extract width from image syntax: ![[url|100]] or ![|100](url) or ![](url){width=100}
+        const widthMatch = imageSyntax.match(/!\[\|(\d+)\]/) || imageSyntax.match(/\{width=(\d+)\}/);
+        const widthAttr = widthMatch ? ` width = "${widthMatch[1]} px"` : '';
+
+        let html = `<center><img src = "${imgUrl}"${widthAttr}/></center>\n`;
+        const figPrefix = crossrefOptions?.figPrefix || '图';
+        html += `<center><b>${figPrefix} ${figCounter} ${captionText.trim()}</b></center>`;
+        if (annotation) {
+          html += `\n<center><font color="#595959">${annotation}</font></center>`;
+        }
+        return html;
       }
+
       let r = '![' + captionText.trim() + '](' + imgUrl + '){#' + figLabel + '}';
       if (annotation) {
         r += '\n\n' + annotation;
@@ -358,11 +422,13 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
       }
 
       if (footnotesMode) {
-        const captionBold = `**${caption}**`;
-        const tableStr = tableLines.join('\n');
-        const annotationStr = annotationLines.length > 0
-          ? `\n<span style="color:#888">${annotationLines.join('\n')}</span>` : '';
-        processedLines.push(captionBold, '', tableStr, annotationStr);
+        // HTML format for footnotes export
+        const tblPrefix = crossrefOptions?.tblPrefix || '表';
+        processedLines.push(`<center>${tblPrefix}${tableCounter} ${caption}</center>`, '');
+        processedLines.push(...tableLines);
+        if (annotationLines.length > 0) {
+          processedLines.push(`<center><font color="#595959">${annotationLines.join('\n')}</font></center>`);
+        }
       } else {
         processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
         processedLines.push('');
@@ -378,6 +444,26 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     }
   }
   result = processedLines.join('\n');
+
+  // 1d. Convert equation labels to \tag format in footnotes mode
+  if (footnotesMode) {
+    const eqPrefix = crossrefOptions?.eqnPrefix || '式';
+    let eqCounter = 0;
+    // Match $$...$$ {#eq:xxx} pattern
+    result = result.replace(/\$\$([\s\S]*?)\$\$\s*\{#(eq:[a-zA-Z0-9][a-zA-Z0-9-]*)\}/g,
+      (_match: string, formula: string, _label: string) => {
+        eqCounter++;
+        return `$$${formula.trim()} \\tag{${eqPrefix} ${eqCounter}}$$`;
+      }
+    );
+    // Also handle inline equations with labels: $...$ {#eq:xxx}
+    result = result.replace(/\$([^\$\n]+?)\$\s*\{#(eq:[a-zA-Z0-9][a-zA-Z0-9-]*)\}/g,
+      (_match: string, formula: string, _label: string) => {
+        eqCounter++;
+        return `$${formula.trim()}$\\tag{${eqPrefix} ${eqCounter}}`;
+      }
+    );
+  }
 
   // 2. Convert regular wikilinks to plain text
   if (!skipWikilinkConversion) {
@@ -395,8 +481,10 @@ function applyMarkdownTransformations(content: string, skipWikilinkConversion = 
     }
   );
 
-  // 4. Shift heading levels: user uses ## as h1, ### as h2
-  result = result.replace(/^(\s*)##/gm, '$1#');
+  // 4. Shift heading levels: user uses ## as h1, ### as h2 (skip in footnotes mode)
+  if (!footnotesMode) {
+    result = result.replace(/^(\s*)##/gm, '$1#');
+  }
 
   return result;
 }
@@ -426,6 +514,7 @@ export async function exportToMarkdownFootnotes(
     equationTitle?: string;
     chapDelim?: string;
     autoSectionLabels?: boolean;
+    lang?: 'zh' | 'en';
   }
 ): Promise<string> {
   if (citations.length === 0) {
@@ -620,7 +709,61 @@ export async function exportToMarkdownFootnotes(
     }
 
     // Clean other wikilinks
-    result = cleanMarkdown(result);
+    // In footnotes mode, first replace @labels with numbers, then let cleanMarkdown handle {#labels}
+    if (crossrefOptions?.lang === 'zh' || !crossrefOptions?.lang) {
+      // Chinese mode: replace @labels before cleanMarkdown removes {#labels}
+      const pref: Record<string, string> = {
+        fig: crossrefOptions?.figPrefix || '图',
+        tbl: crossrefOptions?.tblPrefix || '表',
+        eq: crossrefOptions?.eqnPrefix || '式'
+      };
+
+      // Extract labels and assign numbers
+      const counters = { fig: 0, tbl: 0, eq: 0 };
+      const labelMap: Record<string, string> = {};
+      const labelRegex = /\{#(fig|tbl|eq):([a-zA-Z0-9][a-zA-Z0-9-]*)\}/g;
+      let labelMatch;
+      while ((labelMatch = labelRegex.exec(result)) !== null) {
+        counters[labelMatch[1] as keyof typeof counters]++;
+        const key = `${labelMatch[1]}:${labelMatch[2]}`;
+        labelMap[key] = String(counters[labelMatch[1] as keyof typeof counters]);
+      }
+      // Also extract labels from figure/table callouts
+      const calloutLabelRegex = /^>\s*\[!(?:figure|table)\]\s*.*\{#(fig|tbl):([a-zA-Z0-9][a-zA-Z0-9-]*)\}/gm;
+      while ((labelMatch = calloutLabelRegex.exec(result)) !== null) {
+        counters[labelMatch[1] as keyof typeof counters]++;
+        const key = `${labelMatch[1]}:${labelMatch[2]}`;
+        if (!labelMap[key]) {
+          labelMap[key] = String(counters[labelMatch[1] as keyof typeof counters]);
+        }
+      }
+
+      // Replace @labels with numbers BEFORE cleanMarkdown
+      result = result.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\s+([a-z])\b/g, (_m, type, label, suffix) => {
+        const key = `${type}:${label}`;
+        const num = labelMap[key];
+        if (num) {
+          if (type === 'tbl') {
+            return `${pref[type]}${num}${suffix}`;
+          }
+          return `${pref[type]} ${num}${suffix}`;
+        }
+        return _m;
+      });
+      result = result.replace(/@(fig|tbl|eq):([a-zA-Z0-9][\w-]*)\b/g, (_m, type, label) => {
+        const key = `${type}:${label}`;
+        const num = labelMap[key];
+        if (num) {
+          if (type === 'tbl') {
+            return `${pref[type]}${num}`;
+          }
+          return `${pref[type]} ${num}`;
+        }
+        return _m;
+      });
+    }
+
+    result = cleanMarkdown(result, crossrefOptions);
 
     // Extract figure/table captions from alt text to visible lines
     // Figures: caption after image; Tables: caption before table
@@ -648,8 +791,10 @@ export async function exportToMarkdownFootnotes(
       result += `[^${idx}]: ${fullRef}\n\n`;
     }
 
-    // Resolve cross-references
-    result = resolveCrossrefs(result, crossrefOptions);
+    // For English mode, resolve cross-references after cleanMarkdown
+    if (crossrefOptions?.lang === 'en') {
+      result = resolveCrossrefs(result, crossrefOptions);
+    }
 
     return result.trim() + '\n';
 
@@ -664,6 +809,6 @@ export async function exportToMarkdownFootnotes(
 /**
  * Clean up markdown: convert wikilinks to plain text, handle images, etc.
  */
-function cleanMarkdown(content: string): string {
-  return applyMarkdownTransformations(content, false, true).trim() + '\n';
+function cleanMarkdown(content: string, crossrefOptions?: { figPrefix?: string; tblPrefix?: string; eqnPrefix?: string }): string {
+  return applyMarkdownTransformations(content, false, true, crossrefOptions).trim() + '\n';
 }
