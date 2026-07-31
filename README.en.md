@@ -19,7 +19,7 @@ Zotero excels at reference management, but its note-taking and writing output le
 |------|---------|--------|----------|
 | **BBT** | `Export to Word (Zotero Citations)` | `.docx` (live citations) | Zotero + BBT + Pandoc |
 | **Lite** | Same as above | `.docx` (live citations) | Zotero + Pandoc |
-| **Footnotes** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md` (author-year footnotes) | Zotero + Pandoc |
+| **Footnotes** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md` (author-year footnotes + HTML figure/table captions) | Zotero + Pandoc |
 
 - **BBT** (recommended): Most reliable live citations, full CSL style support, advanced author name handling
 - **Lite**: No BBT needed, ideal for restricted environments. Generated live citations can be refreshed normally
@@ -77,6 +77,7 @@ As shown in @fig:1, ...
 > |-----------|-------------|
 > | A | Description 1 |
 > | B | Description 2 |
+
 As shown in @tbl:1, ...
 
 Inline equation: $y = ax^2 + bx + c$ {#eq:quadratic}
@@ -161,11 +162,13 @@ As shown in Eq. 1, ...
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Export mode | `BBT` | BBT / Lite |
-| CSL style | `apa` | Citation style ID for Word export |
 | CSL style file | `apa` | CSL style for footnotes export (author-year recommended) |
 | Output directory | (empty = same as note) | Word export directory |
 | Word template | (empty = default) | Custom .docx template path |
 | Pandoc path | `pandoc` | Pandoc executable path |
+
+> [!note] Word citation style
+> Word export produces Zotero live citations. The citation format is controlled by the **Zotero plugin inside Word** (Document Preferences → choose CSL style), not by plugin settings.
 
 ### Cross-references (pandoc-crossref)
 
@@ -174,7 +177,7 @@ As shown in Eq. 1, ...
 | Figure prefix | `Fig.` | Figure label prefix |
 | Table prefix | `Tab.` | Table label prefix |
 | Equation prefix | `Eq.` | Equation label prefix |
-| pandoc-crossref path | (empty = disabled) | [Download](https://github.com/lierdakil/pandoc-crossref/releases) pandoc-crossref and set the full path (e.g., `D:/tools/pandoc-crossref.exe`) | |
+| pandoc-crossref path | (empty = disabled) | [Download](https://github.com/lierdakil/pandoc-crossref/releases) pandoc-crossref and set the full path (e.g., `D:/tools/pandoc-crossref.exe`) |
 
 ## Setup guide
 
@@ -190,8 +193,8 @@ As shown in Eq. 1, ...
    - Search `extensions.zotero.translators.better-bibtex.citekeyUnsafeChars`
    - Append right single quotation mark `'` (U+2019) to the value: `"#%'(),={}~'"`
    - Restart Zotero → BBT → Manage Citation Keys → Regenerate all keys
-3. Set CSL style: Plugin settings → CSL style → enter style ID
-   - Common: `apa`, `chicago-author-date`, `ieee`
+4. **Set citation style**: After Word export, click **Zotero** → **Document Preferences** in Word to choose the CSL style
+   - For Chinese: `china-national-standard-gb-t-7714-2015-numeric` (GB/T 7714)
    - Browse styles: <https://www.zotero.org/styles>
 
 ### Lite mode
@@ -239,16 +242,16 @@ CJK authors keep their original characters (no lowercase conversion), e.g., `zha
 <details>
 <summary>Can I batch export multiple notes?</summary>
 
-Not yet — planned for v0.3.
+Not yet — planned for a future release.
 </details>
 
 ## Future plans
 
-- **v0.3** — Bilingual citations (Chinese-English mixed)
-- **v0.4** — Multiple export formats (e.g., [obsidian-enhancing-export](https://github.com/mokeyish/obsidian-enhancing-export), [obsidian-better-export-pdf](https://github.com/l1xnan/obsidian-better-export-pdf))
-- **v0.5** — Cite-as-you-write: search Zotero from command palette → insert wikilink
-- **v0.6** — Batch export multiple notes + progress bar
-- **v0.7** — Refactor: split preprocessor.ts into markdown.ts / word-export.ts / footnotes-export.ts
+- **Bilingual citations** (Chinese-English mixed)
+- **Multiple export formats** (e.g., [obsidian-enhancing-export](https://github.com/mokeyish/obsidian-enhancing-export), [obsidian-better-export-pdf](https://github.com/l1xnan/obsidian-better-export-pdf))
+- **Cite-as-you-write**: search Zotero from command palette → insert wikilink
+- **Batch export multiple notes** + progress bar
+- **Refactor**: split preprocessor.ts into markdown.ts / word-export.ts / footnotes-export.ts
 
 ## Development
 

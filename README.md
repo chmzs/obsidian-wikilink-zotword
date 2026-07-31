@@ -21,7 +21,7 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 |------|------|------|------|
 | **BBT** | `Export to Word (Zotero Citations)` | `.docx`（活引文） | Zotero + BBT + Pandoc |
 | **Lite** | 同上 | `.docx`（活引文） | Zotero + Pandoc |
-| **脚注** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md`（作者年份制脚注） | Zotero + Pandoc |
+| **脚注** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md`（作者年份制脚注 + HTML 图表题注） | Zotero + Pandoc |
 
 - **BBT**（推荐）：活引文最稳定，支持 CSL 样式切换，高级作者名处理
 - **Lite**：无需安装 BBT，适合受限环境。生成的活引文可正常刷新
@@ -88,7 +88,7 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 
 > [!info] 交叉引用说明
 > - `@fig:name` → `图 N`（引用图片）
-> - `@tbl:name` → `表 N`（引用表格）
+> - `@tbl:name` → `表N`（引用表格，无空格）
 > - `@eq:name` → `式 N`（引用公式）
 > - **标签名规则**：仅允许 `a-zA-Z0-9-`，用 `-` 连接单词（如 `{#fig:temp-curve}`），**不允许下划线**
 > - **子图**：同一图多个子图共享标签名，引用加空格+字母：`@fig:name a` → `图 1a`（脚注导出自动去空格，Word 导出手动去空格）
@@ -163,11 +163,13 @@ $$y = ax^2 + bx + c \tag{式 1}$$
 | 设置项 | 默认值 | 说明 |
 |--------|--------|------|
 | Export mode | `BBT` | BBT / Lite |
-| CSL style | `china-national-standard-gb-t-7714-2015-numeric` | 引用样式 ID |
 | CSL style file | `apa` | 脚注导出的 CSL 样式（作者年份制推荐 APA） |
 | Output directory | （空=笔记同目录） | Word 导出目录 |
 | Word template | （空=默认模板） | 自定义 .docx 模板路径 |
 | Pandoc path | `pandoc` | Pandoc 路径 |
+
+> [!note] Word 导出的引文样式
+> Word 模式生成 Zotero 活引文，引文格式由 **Word 中的 Zotero 插件**控制（文档偏好 → 选择 CSL 样式），无需在插件设置中指定。
 
 ### 图表交叉引用
 
@@ -176,9 +178,9 @@ $$y = ax^2 + bx + c \tag{式 1}$$
 | Figure prefix | `图` | 图前缀 |
 | Table prefix | `表` | 表前缀 |
 | Equation prefix | `式` | 公式前缀 |
-| pandoc-crossref path | （空=不使用） | [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) 可执行文件路径（如 `D:/tools/pandoc-crossref.exe`），需自行下载安装 |
+| pandoc-crossref path | （空=不使用） | [pandoc-crossref](https://github.com/lierdakil/pandoc-crossref/releases) 可执行文件路径，需自行下载安装 |
 
-> 下载 Windows 版本 `pandoc-crossref.exe` 后，填设置中填入完整路径（如 `D:/tools/pandoc-crossref.exe`）。 |
+> 下载 Windows 版本 `pandoc-crossref.exe` 后，在设置中填入完整路径（如 `D:/tools/pandoc-crossref.exe`）。
 
 ## 用户配置指南
 
@@ -194,8 +196,8 @@ $$y = ax^2 + bx + c \tag{式 1}$$
    - 搜索 `extensions.zotero.translators.better-bibtex.citekeyUnsafeChars`
    - 值末尾添加弯撇号 `'`（U+2019）：`"#%'(),={}~'"`
    - 重启 Zotero → BBT → 管理引用键 → 重新生成所有引用键
-3. 设置 CSL 样式：插件设置 → CSL style 填入样式 ID
-   - 常用：`china-national-standard-gb-t-7714-2015-numeric`
+4. **设置引文样式**：Word 导出后，在 Word 中点击 **Zotero** → **Document Preferences** 选择 CSL 样式
+   - 中文常用：`china-national-standard-gb-t-7714-2015-numeric`（GB/T 7714 国标）
    - 更多：<https://www.zotero.org/styles>
 
 ### Lite 模式
@@ -243,16 +245,16 @@ BBT 模式需配置 `citekeyUnsafeChars`（见上文配置指南）并重新生�
 <details>
 <summary>如何批量导出多个笔记？</summary>
 
-当前版本暂不支持，计划在 v0.3 实现。
+当前版本暂不支持，计划在后续版本实现。
 </details>
 
 ## 未来计划
 
-- **v0.3** — 双语引文（中英文混合）
-- **v0.4** — 多种导出格式支持（https://github.com/mokeyish/obsidian-enhancing-export、https://github.com/l1xnan/obsidian-better-export-pdf）
-- **v0.5** — 边写边引：命令面板搜索 Zotero 文献 → 插入 wikilink
-- **v0.6** — 批量导出多个笔记 + 导出进度条
-- **v0.7** — 代码重构：将 preprocessor.ts 拆分为 markdown.ts / word-export.ts / footnotes-export.ts
+- **双语引文**（中英文混合）
+- **多种导出格式支持**（https://github.com/mokeyish/obsidian-enhancing-export、https://github.com/l1xnan/obsidian-better-export-pdf）
+- **边写边引**：命令面板搜索 Zotero 文献 → 插入 wikilink
+- **批量导出多个笔记** + 导出进度条
+- **代码重构**：将 preprocessor.ts 拆分为 markdown.ts / word-export.ts / footnotes-export.ts
   
 ## 开发
 
