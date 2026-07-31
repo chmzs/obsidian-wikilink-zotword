@@ -31,9 +31,9 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 
 ### 手动安装
 
-1. 从 [Releases](https://github.com/your-repo/releases) 下载最新版 `dist.zip` 并解压
-2. 将 `dist/` 文件夹中的所有文件复制到 `{vault}/.obsidian/plugins/wikilink-zotword/`
-3. Obsidian 设置 → 社区插件 → 启用 "Wikilink to Zotero Word"
+1. 从 [Releases](https://github.com/chmzs/obsidian-wikilink-zotword/releases) 下载最新版 `wikilink-zotword.zip`
+2. 解压得到 `wikilink-zotword/` 文件夹，整个放入 `{vault}/.obsidian/plugins/` 下
+3. 重启 Obsidian（或在 设置 → 第三方插件 中点刷新），启用 "Wikilink to Zotero Word"
 
 ### 依赖安装
 
@@ -138,7 +138,6 @@ Word 导出后子图引用会有空格（如 `Fig. 1 a`、`图 1 a`），需**�
 | 参数 | 说明 |
 |------|------|
 | A | 描述1 |
-
 <center><font color="#595959">数据来源：综合文献</font></center>
 
 如 表1 所示，……

@@ -29,9 +29,9 @@ Zotero excels at reference management, but its note-taking and writing output le
 
 ### Manual install
 
-1. Download the latest `dist.zip` from [Releases](https://github.com/chmzs/obsidian-wikilink-zotword/releases) and extract
-2. Copy all files from `dist/` to `{vault}/.obsidian/plugins/wikilink-zotword/`
-3. Obsidian Settings → Community Plugins → Enable "Wikilink to Zotero Word"
+1. Download the latest `wikilink-zotword.zip` from [Releases](https://github.com/chmzs/obsidian-wikilink-zotword/releases)
+2. Extract the `wikilink-zotword/` folder and place it under `{vault}/.obsidian/plugins/`
+3. Restart Obsidian (or refresh in Settings → Community Plugins), then enable "Wikilink to Zotero Word"
 
 ### Dependencies
 
@@ -77,7 +77,6 @@ As shown in @fig:1, ...
 > |-----------|-------------|
 > | A | Description 1 |
 > | B | Description 2 |
-
 As shown in @tbl:1, ...
 
 Inline equation: $y = ax^2 + bx + c$ {#eq:quadratic}

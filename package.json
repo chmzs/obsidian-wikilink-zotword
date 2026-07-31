@@ -1,6 +1,6 @@
 {
   "name": "obsidian-wikilink-zotword",
-  "version": "0.3.5",
+  "version": "0.3.7",
   "description": "Export Obsidian wikilinks to Word with Zotero citations via Pandoc",
   "main": "main.js",
   "scripts": {
