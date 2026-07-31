@@ -63,6 +63,7 @@ jobs:
           cache: 'npm'
 
       - name: Create Release with gh CLI
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
