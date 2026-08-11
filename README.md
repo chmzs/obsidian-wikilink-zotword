@@ -107,6 +107,9 @@ Word 导出后子图引用会有空格（如 `Fig. 1 a`、`图 1 a`），需**�
 
 其他前缀（`表/式/Table/Eq./Equation`）同理，逐个前缀重复上述步骤。
 
+> [!tip] 子图字母列表（`a,c`）自动支持
+> 同一表达式无需改即可处理逗号列表：`图 1 a,c` → `图 1a,c`、`Fig. 1 a,c` → `Fig. 1a,c`（首个字母前的空格被去掉，`,c` 原样保留）。
+
 > [!note] Word 通配符语法要点
 > - 数字：`[0-9]@`（`@` 表示前字符出现 1 次或多次，不用 `\d`、`+`、 `{1,}`）
 > - 字母：`[a-z]` 或 `[a-zA-Z]`（不用 `\w`）
@@ -165,8 +168,18 @@ $$y = ax^2 + bx + c \tag{式 1}$$
 | Export mode | `BBT` | BBT / Lite |
 | CSL style file | `apa` | 脚注导出的 CSL 样式（作者年份制推荐 APA） |
 | Output directory | （空=笔记同目录） | Word 导出目录 |
-| Word template | （空=默认模板） | 自定义 .docx 模板路径 |
+| Word template | （空=默认模板） | 自定义 .dotx/.docx 模板路径（推荐下方内置模板） |
 | Pandoc path | `pandoc` | Pandoc 路径 |
+
+> [!tip] 推荐 Word 模板（学术投稿版）
+> 插件自带适配中英文学术期刊的模板（位于 `D:\users\chmzs\Documents\自定义 Office 模板\`），在 **Word template** 填入对应路径即可：
+>
+> - **中文期刊**：`地球科学中文版_论文.dotx`（适配《中国科学：地球科学》等）
+>   - 图片 / 图题 / 表题**居中**、**三线表**、标题层级（一级黑体16pt居中 / 二级黑体14pt / 三级楷体12pt）、正文宋体+Times 五号
+> - **英文期刊**：`地球科学英文版_EPSL.dotx`（适配 Earth and Planetary Science Letters 等 Elsevier 期刊）
+>   - Times New Roman 12pt、**双倍行距 + 连续行号**（投稿要求）、标题加粗/三级斜体、图片/题注**居中**、**三线表**、参考文献著者-年份制
+>
+> 两者均用通用字体（宋体/黑体/楷体 + Times New Roman），无需方正字库。若需自定义版式，可复制模板用 Word 修改样式后另存为新模板。
 
 > [!note] Word 导出的引文样式
 > Word 模式生成 Zotero 活引文，引文格式由 **Word 中的 Zotero 插件**控制（文档偏好 → 选择 CSL 样式），无需在插件设置中指定。

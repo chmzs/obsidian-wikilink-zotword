@@ -105,6 +105,9 @@ Word exports include a space between figure number and suffix (e.g., `Fig. 1 a`,
 
 Other prefixes (`表/式/Table/Eq./Equation`) — same pattern, repeat per prefix.
 
+> [!tip] Sub-figure letter lists (`a,c`) work automatically
+> The same pattern handles comma lists with no change: `图 1 a,c` → `图 1a,c`, `Fig. 1 a,c` → `Fig. 1a,c` (the space after the first letter is removed; `,c` stays).
+
 > [!note] Word wildcard syntax notes
 > - Digits: `[0-9]@` (`@` = 1+ occurrences of previous, NOT `\d`, `+`, `{1,}`)
 > - Letters: `[a-z]` or `[a-zA-Z]` (NOT `\w`)
@@ -164,8 +167,18 @@ As shown in Eq. 1, ...
 | Export mode | `BBT` | BBT / Lite |
 | CSL style file | `apa` | CSL style for footnotes export (author-year recommended) |
 | Output directory | (empty = same as note) | Word export directory |
-| Word template | (empty = default) | Custom .docx template path |
+| Word template | (empty = default) | Custom .dotx/.docx template path (recommend the built-in one below) |
 | Pandoc path | `pandoc` | Pandoc executable path |
+
+> [!tip] Recommended Word templates (academic submission)
+> The plugin ships templates tuned for Chinese and English academic journals (in `D:\users\chmzs\Documents\自定义 Office 模板\`). Set the path in **Word template**:
+>
+> - **Chinese journals**: `地球科学中文版_论文.dotx` (e.g. *Scientia Sinica Terrae*)
+>   - Images / figure captions / table captions centered, three-line tables, heading hierarchy (H1 SimHei 16pt centered / H2 SimHei 14pt / H3 KaiTi 12pt), body SimSun + Times 10.5pt
+> - **English journals**: `地球科学英文版_EPSL.dotx` (e.g. *Earth and Planetary Science Letters*)
+>   - Times New Roman 12pt, double-spaced with continuous line numbers (submission requirement), bold headings / italic H3, centered images and captions, three-line tables, author-year references
+>
+> Both use common fonts (SimSun/SimHei/KaiTi + Times New Roman), no Founder GBK fonts needed. To customize, copy the template, edit styles in Word, and save as a new template.
 
 > [!note] Word citation style
 > Word export produces Zotero live citations. The citation format is controlled by the **Zotero plugin inside Word** (Document Preferences → choose CSL style), not by plugin settings.

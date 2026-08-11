@@ -287,6 +287,26 @@ export function resolveCrossrefs(content: string, options?: {
 }
 
 /**
+ * Decode an Obsidian file:// URI into a pandoc-readable local absolute path.
+ *
+ * Obsidian 复制的绝对路径常为 file:///D:%5C...（反斜杠 URL 编码），pandoc
+ * 无法解析这种 URI（中文路径被 %E9%BB%84 之类编码后也找不到文件）。
+ * 解码为直接的正斜杠绝对路径（D:/OneDrive/...）后 pandoc 才能内嵌图片。
+ *
+ *   file:///D:%5COneDrive%5Cfig%5Cclimate.jpg -> D:/OneDrive/fig/climate.jpg
+ *   file:///D:/OneDrive/fig/climate.jpg         -> D:/OneDrive/fig/climate.jpg (无变化)
+ */
+function decodeFileUri(url: string): string {
+  if (!url.startsWith('file://')) return url;
+  const rest = url.slice('file://'.length).replace(/^\/+/, '');
+  try {
+    return decodeURIComponent(rest).replace(/\\/g, '/');
+  } catch {
+    return rest.replace(/\\/g, '/');
+  }
+}
+
+/**
  * Shared markdown transformations used by both preprocessMarkdown and cleanMarkdown.
  * Handles: YAML frontmatter removal, image embeds, figure/table callouts,
  * wikilink conversion, callout→blockquote, heading shift.
@@ -299,6 +319,9 @@ export function applyMarkdownTransformations(
 ): string {
   // Normalize line endings first
   let result = content.replace(/\r\n/g, '\n');
+
+  // Decode file:// URIs (Obsidian absolute image paths) so pandoc can read them
+  result = result.replace(/file:\/\/[^\s)>]+/g, decodeFileUri);
 
   // Remove existing YAML frontmatter
   result = result.replace(/^---\n[\s\S]*?\n---\n?/, '');
@@ -347,15 +370,16 @@ export function applyMarkdownTransformations(
   });
 
   // 1b. Convert figure callouts to pandoc figure with caption + annotation
+  // [!figure]+ 的 +/- 是 Obsidian 折叠标记，需去掉；{#fig:xxx} 是用户自定义标签，必须保留
   let figCounter = 0;
   result = result.replace(
-    /^>\s*\[!figure\]\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\)(?:\{[^}]+\})?)\s*$/gm,
+    /^>\s*\[!figure\]\s*[+-]?\s*(.*)\n([\s\S]*?)^>\s*(!\[[^\]]*\]\([^)]+\)(?:\{[^}]+\})?)[ \t]*$/gm,
     (_match: string, caption: string, annotationBlock: string, imageSyntax: string) => {
       figCounter++;
       // Extract optional custom label {#fig:xxx} from caption
       const labelMatch = caption.match(/\{#([\w:-]+)\}$/);
       const captionText = labelMatch ? caption.replace(/\s*\{#[\w:-]+\}$/, '') : caption;
-      const figLabel = 'fig:' + figCounter;
+      const figLabel = labelMatch ? labelMatch[1] : 'fig:' + figCounter;
       const annotation = annotationBlock
         .split('\n')
         .map((line: string) => line.replace(/^>\s?/, '').trim())
@@ -382,7 +406,11 @@ export function applyMarkdownTransformations(
 
       let r = '![' + captionText.trim() + '](' + imgUrl + '){#' + figLabel + '}';
       if (annotation) {
-        r += '\n\n' + annotation;
+        // 转义行首列表前缀（a. b. c. → a\. b\. c\.），避免 pandoc 把注释识别为有序列表
+        // 再转为引用块（> 前缀），让 pandoc 用 BlockText 样式渲染为图注（区别于正文 BodyText）
+        const escaped = annotation.replace(/^([a-zA-Z])\.\s+/gm, '$1\\. ');
+        const blockQuote = escaped.split('\n').map((line: string) => `> ${line}`).join('\n');
+        r += '\n\n' + blockQuote;
       }
       return r;
     }

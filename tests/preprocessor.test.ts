@@ -361,4 +361,32 @@ describe('resolveCrossrefs - Chinese format', () => {
     expect(result).toContain('图 1a');
     expect(result).toContain('图 1b');
   });
+
+  it('handles sub-figure suffix list with comma (a,c)', () => {
+    const content = '{#fig:test} shown in @fig:test a,c and @fig:test b,c.';
+    const result = resolveCrossrefs(content, { lang: 'zh' });
+    expect(result).toContain('图 1a,c');
+    expect(result).toContain('图 1b,c');
+  });
+
+  it('preserves custom figure label in Word mode output', () => {
+    const content = `> [!figure]+ 暖期粟黍农业西扩与古国出现 {#fig:sushu}
+> a. 描述文字
+> ![](D:/fig.jpg)`;
+    const result = preprocessMarkdown(content, 'bbt');
+    // 自定义 label 必须保留，否则正文 @fig:sushu 引用失效
+    expect(result).toContain('{#fig:sushu}');
+    // +/- 折叠标记不得进入题注
+    expect(result).not.toContain('![+');
+    expect(result).toContain('![暖期粟黍农业西扩与古国出现]');
+  });
+
+  it('decodes file:// URI to pandoc-readable absolute path', () => {
+    const content = `> [!figure] 题注
+> ![](file:///D:%5COneDrive%5Cfig%5Cclimate_crus_sushu.jpg)`;
+    const result = preprocessMarkdown(content, 'bbt');
+    expect(result).toContain('(D:/OneDrive/fig/climate_crus_sushu.jpg)');
+    expect(result).not.toContain('file://');
+    expect(result).not.toContain('%5C');
+  });
 });
