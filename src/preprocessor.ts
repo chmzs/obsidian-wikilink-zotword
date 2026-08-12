@@ -142,6 +142,10 @@ export function preprocessMarkdown(
     return display || page;
   });
 
+  // 4b. 交叉引用 @fig:/@tbl:/@eq: 前无空格时补空格
+  // pandoc 要求 @ 前为空白/行首才识别为引用；Obsidian 里常写"对@fig:1"（中文紧贴）
+  result = result.replace(/([^\s\[(（])@(fig|tbl|eq):/g, '$1 @$2:');
+
   // 5. Prepend YAML frontmatter
   result = generateFrontmatter() + result;
 
