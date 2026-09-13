@@ -24,6 +24,7 @@ export interface ZoteroExportSettings {
   crossrefEn: CrossrefOptions;
   crossrefFilterPath: string;    // pandoc-crossref 路径（语言无关）
   cslStyleFile: string;
+  lastCompareDocx: string;       // 上次用于修订对比的旧版 docx 路径
 }
 
 export const DEFAULT_SETTINGS: ZoteroExportSettings = {
@@ -53,6 +54,7 @@ export const DEFAULT_SETTINGS: ZoteroExportSettings = {
   },
   crossrefFilterPath: "",
   cslStyleFile: "apa",
+  lastCompareDocx: "",
 };
 
 export class ZoteroExportSettingTab extends PluginSettingTab {
@@ -127,6 +129,22 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.templatePath)
           .onChange(async (value) => {
             this.plugin.settings.templatePath = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // --- Revision compare ---
+    containerEl.createEl("h3", { text: "修订对比 (Word Track Changes)" });
+
+    new Setting(containerEl)
+      .setName("上次比较的文件")
+      .setDesc("「导出为修订对比版」命令默认使用的旧版 docx 路径，导出弹窗中可临时更换。")
+      .addText((text) =>
+        text
+          .setPlaceholder("(尚未使用)")
+          .setValue(this.plugin.settings.lastCompareDocx)
+          .onChange(async (value) => {
+            this.plugin.settings.lastCompareDocx = value;
             await this.plugin.saveSettings();
           })
       );

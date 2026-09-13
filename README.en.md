@@ -13,17 +13,19 @@ Zotero excels at reference management, but its note-taking and writing output le
 
 **wikilink-zotword bridges the last mile.** Powered by Better BibTeX's `zotero.lua`, it seamlessly converts your Obsidian wikilink citations into Word documents with live, dynamically updatable Zotero citations (Live Citations). Get the best of both worlds: fast writing in Obsidian, professional output in Word.
 
-## Three export modes
+## Export modes
 
 | Mode | Command | Output | Requires |
 |------|---------|--------|----------|
 | **BBT** | `Export to Word (Zotero Citations)` | `.docx` (live citations) | Zotero + BBT + Pandoc |
 | **Lite** | Same as above | `.docx` (live citations) | Zotero + Pandoc |
 | **Footnotes** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md` (author-year footnotes + HTML figure/table captions) | Zotero + Pandoc |
+| **Revision compare** | `Export to Word with Track Changes (compare with older docx)` | `.docx` (native Word track changes) | Zotero + Pandoc + **Microsoft Word** |
 
 - **BBT** (recommended): Most reliable live citations, full CSL style support, advanced author name handling
 - **Lite**: No BBT needed, ideal for restricted environments. Generated live citations can be refreshed normally
 - **Footnotes**: Great for WeChat, blogs, and Markdown publishing platforms
+- **Revision compare**: Exports the current note as usual, then compares it against an older docx produced by the same pipeline, generating a document with native Word track changes — your advisor can accept/reject each change
 
 ## Installation
 
@@ -115,6 +117,41 @@ Other prefixes (`表/式/Table/Eq./Equation`) — same pattern, repeat per prefi
 > - **No `|` (OR) support** — do separate passes per prefix
 > - Literal dot needs escape: `Fig\.`, `Eq\.`
 
+## Bilingual figure/table captions
+
+Chinese journals and theses often require captions in both Chinese and English. Separate the two with `|` in the callout title, and the plugin renders them as two stacked lines (style follows Xiang's PhD thesis: `图 1-1 中文题注` / `Fig. 1-1. English caption.`):
+
+```markdown
+> [!figure] 图 1-1 全新世温度重建 | Fig. 1-1. Holocene temperature reconstruction.
+> Note text
+>
+> ![](fig1.png)
+
+> [!table] 表 1-1 代用指标对比 | Tab. 1-1. Proxy comparison.
+>
+> | 指标 | 信号 |
+> |------|------|
+```
+
+- **Word export**: the two lines stay in one caption paragraph with a real line break; numbering is kept verbatim — in Word mode you control the numbers yourself (or via your template)
+- **Markdown footnotes export**: both lines get automatic numbering (`图 1 中文题注` + `Fig. 1 English caption`). Do **not** write numbers in the caption yourself; the EN line prefix comes from the English settings column (Figure prefix default `Fig.`, Table prefix default `Tab.`)
+- Translation is yours to do — the plugin does not translate. Omit the `|` for single-language captions
+- Note: the `|` separator only applies to figure/table callout titles; in plain image embeds `![[file|caption]]` it still means width/caption parameter
+
+## Revision compare (Word track changes)
+
+After revising a paper, let your advisor see exactly what changed, as native Word track changes (accept/reject each one):
+
+1. Export the first version with `Export to Word (Zotero Citations)` and send it to your advisor — that docx becomes the "old version"
+2. After revising the note, `Ctrl+P` → `Export to Word with Track Changes (compare with older docx)`
+3. Confirm the old docx in the dialog — the last-used path is pre-filled, so usually just click "Start"; pick a different file if needed
+4. The plugin exports the new docx, then calls Microsoft Word to compare the two documents, producing `{note}_修订对比.docx` and revealing it in the file manager
+
+> [!note] Notes on revision compare
+> - Requires **Microsoft Word** installed locally (Windows, via COM automation). WPS is not supported yet
+> - Both versions should be exported by this plugin (same Pandoc pipeline and Word template). If the old version was manually typeset in Word, formatting noise will pollute the comparison
+> - The revision author name follows Word's own user name setting (File → Options → General → User name)
+
 ## Markdown footnotes export
 
 Ideal for WeChat, blogs, Notion, and other Markdown publishing platforms.
@@ -168,6 +205,7 @@ As shown in Eq. 1, ...
 | CSL style file | `apa` | CSL style for footnotes export (author-year recommended) |
 | Output directory | (empty = same as note) | Word export directory |
 | Word template | (empty = default) | Custom .dotx/.docx template path (recommend the built-in one below) |
+| Last comparison file | (empty) | Old docx used by default by the revision-compare command; can be swapped in the export dialog |
 | Pandoc path | `pandoc` | Pandoc executable path |
 
 > [!tip] Recommended Word templates (academic submission)

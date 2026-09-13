@@ -319,7 +319,8 @@ export function applyMarkdownTransformations(
   content: string,
   skipWikilinkConversion = false,
   footnotesMode = false,
-  crossrefOptions?: { figPrefix?: string; tblPrefix?: string; eqnPrefix?: string }
+  crossrefOptions?: { figPrefix?: string; tblPrefix?: string; eqnPrefix?: string },
+  enOptions?: { figPrefix?: string; tblPrefix?: string }
 ): string {
   // Normalize line endings first
   let result = content.replace(/\r\n/g, '\n');
@@ -382,8 +383,12 @@ export function applyMarkdownTransformations(
       figCounter++;
       // Extract optional custom label {#fig:xxx} from caption
       const labelMatch = caption.match(/\{#([\w:-]+)\}$/);
-      const captionText = labelMatch ? caption.replace(/\s*\{#[\w:-]+\}$/, '') : caption;
+      const captionBody = labelMatch ? caption.replace(/\s*\{#[\w:-]+\}$/, '') : caption;
       const figLabel = labelMatch ? labelMatch[1] : 'fig:' + figCounter;
+      // Bilingual caption: "中文题注 | English caption" (user-translated, no auto-translation).
+      // First part is the primary line and carries the figure number;
+      // the second part renders as a second line without a number.
+      const [captionZh = '', captionEn = ''] = captionBody.split('|').map((s: string) => s.trim());
       const annotation = annotationBlock
         .split('\n')
         .map((line: string) => line.replace(/^>\s?/, '').trim())
@@ -401,14 +406,23 @@ export function applyMarkdownTransformations(
 
         let html = `<center><img src = "${imgUrl}"${widthAttr}/></center>\n`;
         const figPrefix = crossrefOptions?.figPrefix || '图';
-        html += `<center><b>${figPrefix} ${figCounter} ${captionText.trim()}</b></center>`;
+        // Bilingual style (after Xiang Lixiong's thesis): EN line carries its own
+        // "Fig. N" numbering, prefix from crossrefEn settings
+        const enFigPrefix = enOptions?.figPrefix || 'Fig.';
+        html += `<center><b>${figPrefix} ${figCounter} ${captionZh}</b></center>`;
+        if (captionEn) {
+          html += `\n<center><b>${enFigPrefix} ${figCounter} ${captionEn}</b></center>`;
+        }
         if (annotation) {
           html += `\n<center><font color="#595959">${annotation}</font></center>`;
         }
         return html;
       }
 
-      let r = '![' + captionText.trim() + '](' + imgUrl + '){#' + figLabel + '}';
+      // Word mode: two-line caption via hard line break (backslash + newline),
+      // pandoc renders it as w:br inside the docx caption paragraph
+      const altCaption = captionEn ? `${captionZh}\\\n${captionEn}` : captionZh;
+      let r = '![' + altCaption + '](' + imgUrl + '){#' + figLabel + '}';
       if (annotation) {
         // 转义行首列表前缀（a. b. c. → a\. b\. c\.），避免 pandoc 把注释识别为有序列表
         // 再转为引用块（> 前缀），让 pandoc 用 BlockText 样式渲染为图注（区别于正文 BodyText）
@@ -433,7 +447,10 @@ export function applyMarkdownTransformations(
       const captionFull = tableMatch[1].trim();
       const labelMatch = captionFull.match(/\{#([\w:-]+)\}$/);
       const tblLabel = labelMatch ? labelMatch[1] : 'tbl:' + tableCounter;
-      const caption = labelMatch ? captionFull.replace(/\s*\{#[\w:-]+\}$/, '') : captionFull;
+      const captionBody = labelMatch ? captionFull.replace(/\s*\{#[\w:-]+\}$/, '') : captionFull;
+      // Bilingual caption: "中文题注 | English caption" (user-translated).
+      // First part carries the table number; second part is a plain second line.
+      const [caption = '', captionEn = ''] = captionBody.split('|').map((s: string) => s.trim());
       i++;
 
       const annotationLines: string[] = [];
@@ -456,13 +473,22 @@ export function applyMarkdownTransformations(
       if (footnotesMode) {
         // HTML format for footnotes export
         const tblPrefix = crossrefOptions?.tblPrefix || '表';
+        const enTblPrefix = enOptions?.tblPrefix || 'Tab.';
         processedLines.push(`<center>${tblPrefix}${tableCounter} ${caption}</center>`, '');
+        if (captionEn) {
+          processedLines.push(`<center>${enTblPrefix} ${tableCounter} ${captionEn}</center>`, '');
+        }
         processedLines.push(...tableLines);
         if (annotationLines.length > 0) {
           processedLines.push(`<center><font color="#595959">${annotationLines.join('\n')}</font></center>`);
         }
       } else {
-        processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
+        // Word mode: two-line caption via hard line break (backslash + newline)
+        if (captionEn) {
+          processedLines.push(`: ${caption}\\\n${captionEn} {#${tblLabel}}`);
+        } else {
+          processedLines.push(': ' + caption + ' {#' + tblLabel + '}');
+        }
         processedLines.push('');
         processedLines.push(...tableLines);
         if (annotationLines.length > 0) {
@@ -547,11 +573,12 @@ export async function exportToMarkdownFootnotes(
     chapDelim?: string;
     autoSectionLabels?: boolean;
     lang?: 'zh' | 'en';
-  }
+  },
+  enOptions?: { figPrefix?: string; tblPrefix?: string }
 ): Promise<string> {
   if (citations.length === 0) {
     // No citations, just clean up wikilinks and return
-    return cleanMarkdown(content);
+    return cleanMarkdown(content, crossrefOptions, enOptions);
   }
 
   const tmpDir = os.tmpdir();
@@ -795,7 +822,7 @@ export async function exportToMarkdownFootnotes(
       });
     }
 
-    result = cleanMarkdown(result, crossrefOptions);
+    result = cleanMarkdown(result, crossrefOptions, enOptions);
 
     // Extract figure/table captions from alt text to visible lines
     // Figures: caption after image; Tables: caption before table
@@ -841,6 +868,10 @@ export async function exportToMarkdownFootnotes(
 /**
  * Clean up markdown: convert wikilinks to plain text, handle images, etc.
  */
-function cleanMarkdown(content: string, crossrefOptions?: { figPrefix?: string; tblPrefix?: string; eqnPrefix?: string }): string {
-  return applyMarkdownTransformations(content, false, true, crossrefOptions).trim() + '\n';
+function cleanMarkdown(
+  content: string,
+  crossrefOptions?: { figPrefix?: string; tblPrefix?: string; eqnPrefix?: string },
+  enOptions?: { figPrefix?: string; tblPrefix?: string }
+): string {
+  return applyMarkdownTransformations(content, false, true, crossrefOptions, enOptions).trim() + '\n';
 }

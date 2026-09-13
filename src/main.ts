@@ -4,6 +4,9 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
+import { compareDocxWithWord, showItemInFolder } from "./revision";
+import { CompareDocModal } from "./compare-modal";
+
 import {
   ZoteroExportSettings,
   DEFAULT_SETTINGS,
@@ -55,6 +58,12 @@ export default class ZoteroExportPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "export-revision-compare",
+      name: "Export to Word with Track Changes (compare with older docx)",
+      callback: () => this.exportRevisionCompare(),
+    });
+
+    this.addCommand({
       id: "export-to-markdown-footnotes",
       name: "Export to Markdown (Obsidian Footnotes + Zotero)",
       callback: () => this.exportToMarkdownFootnotes(),
@@ -95,20 +104,36 @@ export default class ZoteroExportPlugin extends Plugin {
   }
 
   async exportCurrentNote() {
+    const result = await this.runWordExport();
+    if (result && result.citationCount > 0) {
+      this.checkBbtConnection();
+    }
+  }
+
+  /**
+   * Core Word export pipeline shared by export commands.
+   * Returns output info, or null on failure (failure notices already shown).
+   */
+  private async runWordExport(): Promise<{
+    outputPath: string;
+    outputDir: string;
+    baseName: string;
+    citationCount: number;
+  } | null> {
     const file = this.app.workspace.getActiveFile();
     if (!file) {
       new Notice("❌ 没有打开的笔记文件");
-      return;
+      return null;
     }
 
     // Pre-flight checks
     const pandocOk = this.checkPandoc();
-    if (!pandocOk) return;
+    if (!pandocOk) return null;
 
     const filterPath = this.findLuaFilter();
     if (!filterPath) {
       new Notice("❌ 找不到 Lua 过滤器\n请确认插件 filters/ 目录完整");
-      return;
+      return null;
     }
 
     try {
@@ -157,7 +182,7 @@ export default class ZoteroExportPlugin extends Plugin {
         console.error("Pandoc failed:", stderr);
         new Notice(`❌ Pandoc 转换失败\n\n${this.summarizePandocError(stderr)}`);
         this.cleanup(tmpMd, tmpDocx);
-        return;
+        return null;
       }
 
       // 6. Copy to output
@@ -179,7 +204,7 @@ export default class ZoteroExportPlugin extends Plugin {
           new Notice(`❌ 写入文件失败: ${error.message}\n${outputPath}`);
         }
         this.cleanup(tmpMd, tmpDocx);
-        return;
+        return null;
       }
 
       // 7. Cleanup
@@ -190,15 +215,67 @@ export default class ZoteroExportPlugin extends Plugin {
         : `✅ 导出成功（无引用）\n${outputPath}`;
       new Notice(msg);
 
-      // Warn if some citekeys weren't found by BBT
-      if (citations.length > 0) {
-        this.checkBbtConnection();
-      }
-
+      return { outputPath, outputDir, baseName, citationCount: citations.length };
     } catch (error) {
       console.error("Export failed:", error);
       new Notice(`❌ 导出失败: ${error.message}`);
+      return null;
     }
+  }
+
+  /**
+   * Export current note to docx, then produce a Word-native
+   * track-changes comparison against a user-chosen older docx.
+   */
+  async exportRevisionCompare() {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) {
+      new Notice("❌ 没有打开的笔记文件");
+      return;
+    }
+
+    // Pick the old docx to compare against (modal shows last-used path)
+    const oldPath = await new Promise<string | null>((resolve) => {
+      new CompareDocModal(
+        this.app,
+        this.settings.lastCompareDocx,
+        `${path.basename(file.path, ".md")}.docx`,
+        resolve
+      ).open();
+    });
+    if (!oldPath) return;
+
+    const result = await this.runWordExport();
+    if (!result) return;
+
+    if (path.resolve(oldPath) === path.resolve(result.outputPath)) {
+      new Notice("❌ 选定的旧版与本次导出文件相同，无法比较");
+      return;
+    }
+
+    const comparePath = path.join(
+      result.outputDir,
+      `${result.baseName}_修订对比.docx`
+    ).replace(/\\/g, '/');
+
+    try {
+      new Notice("⏳ 正在调用 Word 生成修订对比（可能需要十几秒）...");
+      await compareDocxWithWord(oldPath, result.outputPath, comparePath);
+    } catch (error: any) {
+      console.error("Word compare failed:", error);
+      new Notice(
+        `❌ Word 修订对比失败: ${error.message || error}\n\n` +
+        `新导出的干净版仍在:\n${result.outputPath}`
+      );
+      return;
+    }
+
+    // Remember the chosen comparison file for next time
+    this.settings.lastCompareDocx = oldPath;
+    await this.saveSettings();
+
+    new Notice(`✅ 修订对比版已生成\n${comparePath}`);
+    showItemInFolder(comparePath);
   }
 
   async exportToMarkdownFootnotes() {
@@ -232,7 +309,7 @@ export default class ZoteroExportPlugin extends Plugin {
       const crossrefOptions2 = { ...this.settings.crossref, ...yamlOverrides2 };
       const result = await exportToMarkdownFootnotes(
         content, citations, this.settings.pandocPath, this.settings.cslStyleFile,
-        crossrefFilterPath, crossrefOptions2
+        crossrefFilterPath, crossrefOptions2, this.settings.crossrefEn
       );
 
       if (citations.length > 0) {

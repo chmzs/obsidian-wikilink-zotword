@@ -15,17 +15,19 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 
 **wikilink-zotword 正是为打通这"最后一公里"而生。** 借助 Better BibTeX 提供的 `zotero.lua`，我们将 Obsidian 中的双链引用无缝转换为 Word 中可动态更新的 Zotero 活引文（Live Citation），高效融合 Obsidian 写作的畅快与 Word 排版的专业能力，上手轻便。
 
-## 三种导出模式
+## 导出模式
 
 | 模式 | 命令 | 输出 | 依赖 |
 |------|------|------|------|
 | **BBT** | `Export to Word (Zotero Citations)` | `.docx`（活引文） | Zotero + BBT + Pandoc |
 | **Lite** | 同上 | `.docx`（活引文） | Zotero + Pandoc |
 | **脚注** | `Export to Markdown (Obsidian Footnotes + Zotero)` | `.md`（作者年份制脚注 + HTML 图表题注） | Zotero + Pandoc |
+| **修订对比** | `Export to Word with Track Changes (compare with older docx)` | `.docx`（Word 原生修订痕迹） | Zotero + Pandoc + **Microsoft Word** |
 
 - **BBT**（推荐）：活引文最稳定，支持 CSL 样式切换，高级作者名处理
 - **Lite**：无需安装 BBT，适合受限环境。生成的活引文可正常刷新
 - **脚注**：适合微信公众号、博客等 Markdown 发布平台
+- **修订对比**：先正常导出新版，再与本插件（或同管线）导出的旧版 docx 比较，生成带 Word 原生修订标记的对比文档，导师可在 Word 中逐条接受/拒绝
 
 ## 安装
 
@@ -117,6 +119,41 @@ Word 导出后子图引用会有空格（如 `Fig. 1 a`、`图 1 a`），需**�
 > - **不支持 `|` 表示“或”**，需分前缀分步替换
 > - 点号 `.` 需转义 `\.`（如 `Fig\.`、`Eq\.`）
 
+## 双语图表题注
+
+中文期刊与学位论文常要求图表题注中英文对照。题注中用 `|` 分隔中英文，插件自动排成上下两行（格式参照向丽雄博士论文的题注风格）：
+
+```markdown
+> [!figure] 图 1-1 全新世温度重建 | Fig. 1-1. Holocene temperature reconstruction.
+> 数据说明
+>
+> ![](fig1.png)
+
+> [!table] 表 1-1 代用指标对比 | Tab. 1-1. Proxy comparison.
+>
+> | 指标 | 信号 |
+> |------|------|
+```
+
+- **Word 导出**：中文行、英文行在同一题注段内上下两行（Word 真实换行，非软回车）；编号按你写的保留——Word 模式的编号由你自己或模板控制
+- **Markdown 脚注导出**：两行均自动加编号（`图 1 中文题注` + `Fig. 1 English caption`）。题注里**不要再手写编号**；英文行前缀取自设置的 English 列（Figure prefix 默认 `Fig.`，Table prefix 默认 `Tab.`）
+- 双语内容需自己翻译，插件不做翻译；不需要双语时题注中不写 `|` 即可
+- 注意：`|` 分隔符只对 figure/table callout 题注生效，普通图片嵌入 `![[file|caption]]` 的 `|` 仍是宽度/题注参数
+
+## 修订对比（Word 修订痕迹）
+
+修改论文后，让导师在 Word 中直接看到你的修改（原生 Track Changes，可逐条接受/拒绝）：
+
+1. 第一版用 `Export to Word (Zotero Citations)` 导出并发给导师（这份 docx 就是"旧版"）
+2. 修改笔记后，`Ctrl+P` → `Export to Word with Track Changes (compare with older docx)`
+3. 弹窗中确认旧版 docx 路径——默认预填上次所选，直接点"开始导出"即可；不对再"选择文件…"重新挑
+4. 插件先正常导出新版 docx，再调用 Microsoft Word 比较两份文档，生成 `{笔记名}_修订对比.docx` 并在资源管理器中定位
+
+> [!note] 修订对比的注意事项
+> - 依赖本机安装 **Microsoft Word**（Windows 平台，COM 自动化），WPS 暂不支持
+> - 旧版与新版建议都由本插件导出（同一条 Pandoc 管线、同一 Word 模板）。若旧版是老师手动排过版的文件，排版差异会污染比较结果
+> - 修订作者名继承 Word 自身的用户名设置（Word → 文件 → 选项 → 常规 → 用户名）
+
 ## Markdown 脚注导出
 
 适合微信公众号、博客、Notion 等 Markdown 发布平台。
@@ -169,6 +206,7 @@ $$y = ax^2 + bx + c \tag{式 1}$$
 | CSL style file | `apa` | 脚注导出的 CSL 样式（作者年份制推荐 APA） |
 | Output directory | （空=笔记同目录） | Word 导出目录 |
 | Word template | （空=默认模板） | 自定义 .dotx/.docx 模板路径（推荐下方内置模板） |
+| 上次比较的文件 | （空） | 「导出为修订对比版」默认使用的旧版 docx 路径，导出弹窗中可临时更换 |
 | Pandoc path | `pandoc` | Pandoc 路径 |
 
 > [!tip] 推荐 Word 模板（学术投稿版）

@@ -181,6 +181,36 @@ describe('preprocessMarkdown', () => {
     const result = preprocessMarkdown(content, 'bbt');
     expect(result).toContain('> **Note**: This is a note');
   });
+
+  it('converts bilingual figure callout to hard-break caption (Word mode)', () => {
+    const content = `> [!figure] 图 1 全新世温度重建 | Holocene temperature reconstruction
+>
+> ![](D:/附件/fig1.png)`;
+    const result = preprocessMarkdown(content, 'bbt');
+    // Caption contains a real line break (backslash + newline), no pipe residue
+    expect(result).toContain('![图 1 全新世温度重建\\\nHolocene temperature reconstruction](D:/附件/fig1.png){#fig:1}');
+    expect(result).not.toContain('| Holocene');
+    expect(result).not.toContain('> [!figure]');
+  });
+
+  it('converts bilingual table callout to hard-break caption (Word mode)', () => {
+    const content = `> [!table] 表 1 代用指标对比 | Proxy comparison
+>
+> | 指标 | 信号 |
+> |------|------|
+> | 花粉 | 温度 |`;
+    const result = preprocessMarkdown(content, 'bbt');
+    expect(result).toContain(': 表 1 代用指标对比\\\nProxy comparison {#tbl:1}');
+    expect(result).toContain('| 指标 | 信号 |');
+  });
+
+  it('keeps custom figure label in bilingual captions (Word mode)', () => {
+    const content = `> [!figure]+ 中文题注 | English caption {#fig:sushu}
+>
+> ![](D:/附件/fig2.png)`;
+    const result = preprocessMarkdown(content, 'bbt');
+    expect(result).toContain('![中文题注\\\nEnglish caption](D:/附件/fig2.png){#fig:sushu}');
+  });
 });
 
 describe('preprocessMarkdown with BBT citekey map', () => {
@@ -303,6 +333,46 @@ describe('applyMarkdownTransformations - footnotesMode', () => {
     const result = applyMarkdownTransformations(content, false, true);
     expect(result).toContain('<center><img src = "https://example.com/image.jpg"/></center>');
     expect(result).toContain('<center><b>图 1 Test Figure</b></center>');
+  });
+
+  it('converts bilingual figure callout to two HTML caption lines', () => {
+    const content = `> [!figure] 全新世温度重建 | Holocene temperature reconstruction
+> 数据说明
+> ![](https://example.com/image.jpg)`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('<center><b>图 1 全新世温度重建</b></center>');
+    // EN line carries its own numbering (Xiang thesis style)
+    expect(result).toContain('<center><b>Fig. 1 Holocene temperature reconstruction</b></center>');
+    expect(result).not.toContain('图 2');
+    expect(result).toContain('<font color="#595959">数据说明</font>');
+  });
+
+  it('converts bilingual table callout to two HTML caption lines', () => {
+    const content = `> [!table] 代用指标对比 | Proxy comparison
+>
+> | 指标 | 信号 |
+> |------|------|`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('<center>表1 代用指标对比</center>');
+    expect(result).toContain('<center>Tab. 1 Proxy comparison</center>');
+    expect(result).not.toContain('表2');
+  });
+
+  it('uses configured crossrefEn prefixes for bilingual caption lines', () => {
+    const content = `> [!figure] 中文题注 | English caption
+> ![](https://example.com/image.jpg)`;
+    const result = applyMarkdownTransformations(content, false, true, undefined, { figPrefix: 'Figure', tblPrefix: 'Table' });
+    expect(result).toContain('<center><b>图 1 中文题注</b></center>');
+    expect(result).toContain('<center><b>Figure 1 English caption</b></center>');
+  });
+
+  it('keeps pipe-less captions unaffected', () => {
+    const content = `> [!figure] 单语题注
+> ![](https://example.com/image.jpg)`;
+    const result = applyMarkdownTransformations(content, false, true);
+    expect(result).toContain('<center><b>图 1 单语题注</b></center>');
+    expect(result).not.toContain('<center><b>单语题注</b></center>');
+    expect(result).not.toContain('Fig.');
   });
 
   it('converts table callout to HTML format', () => {
