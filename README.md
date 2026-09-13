@@ -5,15 +5,17 @@
 将 Obsidian `[[wikilink]]` 文献引用导出为 Word 中的 Zotero 活引文，或 Markdown 作者年份制脚注。
 
 > [!tip] 推荐搭配
-> 本插件与 [Zotero One](https://weixin.qq.com/sph/AE3FgkpLTt) 配合使用效果最佳——Zotero One 自动同步文献笔记到 Obsidian，本插件负责将写作成果导出为 Word。
+> 本插件与 [Zotero One](https://mp.weixin.qq.com/s/spXpI2IlYvft5hDnvDu5SQ)（公众号 **青柠学术** 出品）配合使用效果最佳——Zotero One 自动同步文献笔记到 Obsidian，笔记文件名自带引用所需的 itemKey，本插件负责将写作成果导出为 Word。
 
 ## 为什么需要这个插件
 
-Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有不足——新时代我们急需将知识输入高效转化为学术发表。配合 Obsidian 原生的双链快捷引用和即时预览，论文写作体验十分流畅。
+Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有不足——新时代我们急需将知识输入高效转化为学术发表。[Zotero One](https://mp.weixin.qq.com/s/spXpI2IlYvft5hDnvDu5SQ) 打通了 Zotero 与 Obsidian，自动同步文章笔记，加上 Obsidian 自带的双链快捷引用和即时预览，写作体验十分流畅。
 
 相比之下，Word 中直接通过 Zotero 插入文献显得迟缓，跳转回 Zotero 查阅原文也颇为繁琐。但 Word 仍是学术交流的硬通货——复杂排版、 CSL 样式切换、期刊投稿都离不开它。
 
 **wikilink-zotword 正是为打通这"最后一公里"而生。** 借助 Better BibTeX 提供的 `zotero.lua`，我们将 Obsidian 中的双链引用无缝转换为 Word 中可动态更新的 Zotero 活引文（Live Citation），高效融合 Obsidian 写作的畅快与 Word 排版的专业能力，上手轻便。
+
+图文版上手教程见 [docs/tutorial.md](docs/tutorial.md)。
 
 ## 导出模式
 
@@ -28,6 +30,9 @@ Zotero 是优秀的文献管理软件，但其笔记管理与写作输出仍有�
 - **Lite**：无需安装 BBT，适合受限环境。生成的活引文可正常刷新
 - **脚注**：适合微信公众号、博客等 Markdown 发布平台
 - **修订对比**：先正常导出新版，再与本插件（或同管线）导出的旧版 docx 比较，生成带 Word 原生修订标记的对比文档，导师可在 Word 中逐条接受/拒绝
+
+> [!tip] 图文教程
+> 更直观的上手教程（含截图与效果示例）见 [docs/tutorial.md](docs/tutorial.md)。
 
 ## 安装
 
@@ -210,14 +215,7 @@ $$y = ax^2 + bx + c \tag{式 1}$$
 | Pandoc path | `pandoc` | Pandoc 路径 |
 
 > [!tip] 推荐 Word 模板（学术投稿版）
-> 插件自带适配中英文学术期刊的模板（位于 `D:\users\chmzs\Documents\自定义 Office 模板\`），在 **Word template** 填入对应路径即可：
->
-> - **中文期刊**：`地球科学中文版_论文.dotx`（适配《中国科学：地球科学》等）
->   - 图片 / 图题 / 表题**居中**、**三线表**、标题层级（一级黑体16pt居中 / 二级黑体14pt / 三级楷体12pt）、正文宋体+Times 五号
-> - **英文期刊**：`地球科学英文版_EPSL.dotx`（适配 Earth and Planetary Science Letters 等 Elsevier 期刊）
->   - Times New Roman 12pt、**双倍行距 + 连续行号**（投稿要求）、标题加粗/三级斜体、图片/题注**居中**、**三线表**、参考文献著者-年份制
->
-> 两者均用通用字体（宋体/黑体/楷体 + Times New Roman），无需方正字库。若需自定义版式，可复制模板用 Word 修改样式后另存为新模板。
+> 仓库自带适配中文学术期刊/学位论文的脱敏模板 [docs/templates/academic-cn.dotx](docs/templates/academic-cn.dotx)：图片/图题/表题**居中**、**三线表**、标题层级（一级黑体16pt居中 / 二级黑体14pt / 三级楷体12pt）、正文宋体+Times 五号、通用字体无需方正字库。下载后在 **Word template** 填入完整路径即可，效果见[图文教程](docs/tutorial.md)。
 
 > [!note] Word 导出的引文样式
 > Word 模式生成 Zotero 活引文，引文格式由 **Word 中的 Zotero 插件**控制（文档偏好 → 选择 CSL 样式），无需在插件设置中指定。

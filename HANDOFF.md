@@ -2,6 +2,23 @@
 
 > 跨会话状态交接点。新记录插最前面。
 
+## 2026-09-13：图文教程 + 脱敏模板入库 + 文档整合
+
+- 新增 `docs/tutorial.md` 图文教程（7 图）：安装/模式选型/修订对比/双语题注/模板/常见坑
+- 新增 `docs/templates/academic-cn.dotx`：原"地球科学中文版_论文.dotx"脱敏版（core.xml/app.xml 元数据清理，重命名）；README 删除个人模板路径
+- 图5/图6 用合成中性内容 + 模板管线重做（grep 确认无地球科学/盘星藻等字样）；教程示例同步中性化
+- `doc/` 并入 `docs/`（crossref-example.md、callout-styles.css），收紧为 docs/ 单目录
+- README/教程分工：README 概览 + 入口，docs/tutorial.md 手把手；README.en 同步（含 Zotero One 推荐改为青柠学术文章链接、致谢区同步）
+- 教程配图：4 张用户截图（已检查无敏感信息）+ 2 张合成效果图 + zotero-one-promo.jpg
+- mkchart 的 matplotlib 在 geo 环境创建 figure 时崩（exit 127 无输出），改用 PIL 手绘占位图绕过（环境问题，未深究）
+
+## 2026-09-13：v0.4.0 已发布 + 部署 + 推广初稿
+
+- 发布：commit fc6c19e，tag `v0.4.0`，CI 通过，Release 已带 `wikilink-zotword.zip`
+- 部署：main.js/manifest/filters 已复制到 PaperBell vault 插件目录，obsidian.com 热重载成功，`export-revision-compare` 命令已验证注册
+- 推广文初稿：PaperBell `02_输出/22_Blog/在 Obsidian 里写论文，交给导师的 Word 自带修订痕迹.md`（status: draft，已按用户意见补上 Lite 模式介绍；另有 300 字群发短版已交付；待用户定稿 + paper-deslop-zh 去 AI 味 + 封面图）
+- 上一轮改动（修订对比/双语题注/AGENTS.md）见下一条记录，全部已随 v0.4.0 发布
+
 ## 2025-会话：修订对比 + 双语题注 + AGENTS.md
 
 ### 本轮改动

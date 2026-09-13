@@ -5,7 +5,7 @@
 Export Obsidian `[[wikilink]]` citations to Word with Zotero live citations, or Markdown author-year footnotes.
 
 > [!tip] Recommended companion
-> Works best with [Zotero One](https://weixin.qq.com/sph/AE3FgkpLTt) — auto-syncs literature notes from Zotero to Obsidian. This plugin handles the export back to Word.
+> Works best with [Zotero One](https://mp.weixin.qq.com/s/spXpI2IlYvft5hDnvDu5SQ) (by the **Qingning Academic** WeChat account) — auto-syncs literature notes from Zotero to Obsidian with the itemKey in the filename. This plugin handles the export back to Word.
 
 ## Why this plugin?
 
@@ -26,6 +26,9 @@ Zotero excels at reference management, but its note-taking and writing output le
 - **Lite**: No BBT needed, ideal for restricted environments. Generated live citations can be refreshed normally
 - **Footnotes**: Great for WeChat, blogs, and Markdown publishing platforms
 - **Revision compare**: Exports the current note as usual, then compares it against an older docx produced by the same pipeline, generating a document with native Word track changes — your advisor can accept/reject each change
+
+> [!tip] Illustrated tutorial
+> A visual step-by-step tutorial (with screenshots and output examples) is available in [docs/tutorial.md](docs/tutorial.md).
 
 ## Installation
 
@@ -208,15 +211,8 @@ As shown in Eq. 1, ...
 | Last comparison file | (empty) | Old docx used by default by the revision-compare command; can be swapped in the export dialog |
 | Pandoc path | `pandoc` | Pandoc executable path |
 
-> [!tip] Recommended Word templates (academic submission)
-> The plugin ships templates tuned for Chinese and English academic journals (in `D:\users\chmzs\Documents\自定义 Office 模板\`). Set the path in **Word template**:
->
-> - **Chinese journals**: `地球科学中文版_论文.dotx` (e.g. *Scientia Sinica Terrae*)
->   - Images / figure captions / table captions centered, three-line tables, heading hierarchy (H1 SimHei 16pt centered / H2 SimHei 14pt / H3 KaiTi 12pt), body SimSun + Times 10.5pt
-> - **English journals**: `地球科学英文版_EPSL.dotx` (e.g. *Earth and Planetary Science Letters*)
->   - Times New Roman 12pt, double-spaced with continuous line numbers (submission requirement), bold headings / italic H3, centered images and captions, three-line tables, author-year references
->
-> Both use common fonts (SimSun/SimHei/KaiTi + Times New Roman), no Founder GBK fonts needed. To customize, copy the template, edit styles in Word, and save as a new template.
+> [!tip] Recommended Word template (academic submission)
+> The repo ships a sanitized Chinese academic journal/thesis template, [docs/templates/academic-cn.dotx](docs/templates/academic-cn.dotx): centered images / figure captions / table captions, three-line tables, heading hierarchy (H1 SimHei 16pt centered / H2 SimHei 14pt / H3 KaiTi 12pt), body SimSun + Times 10.5pt, common fonts only (no Founder GBK fonts needed). Download it and set the full path in **Word template** — see the [illustrated tutorial](docs/tutorial.md) for rendered examples.
 
 > [!note] Word citation style
 > Word export produces Zotero live citations. The citation format is controlled by the **Zotero plugin inside Word** (Document Preferences → choose CSL style), not by plugin settings.
@@ -316,7 +312,7 @@ npm run test     # Run tests
 ## Acknowledgments
 
 - [Better BibTeX](https://retorque.re/zotero-better-bibtex/) — `zotero.lua` Pandoc filter
-- [Zotero One](https://weixin.qq.com/sph/AE3FgkpLTt) — Bridges Zotero and Obsidian
+- [Zotero One](https://mp.weixin.qq.com/s/spXpI2IlYvft5hDnvDu5SQ) — Bridges Zotero and Obsidian (Qingning Academic, in Chinese)
 - [pandoc-crossref](https://github.com/tomduck/pandoc-crossref) — Figure/table/equation cross-references
 - [Pandoc](https://pandoc.org/) — Universal document converter
 - [Obsidian for paper](https://medium.com/better-humans/obsidian-tutorial-for-academic-writing-87b038060522) — Obsidian Tutorial for Academic Writing
