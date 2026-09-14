@@ -459,4 +459,18 @@ describe('resolveCrossrefs - Chinese format', () => {
     expect(result).not.toContain('file://');
     expect(result).not.toContain('%5C');
   });
+
+  it('uses a valid fallback label for a non-ASCII image filename', () => {
+    const result = preprocessMarkdown('![图表](D:/图片/实验结果.png)', 'bbt');
+    expect(result).toMatch(/\{#fig:image-\d+\}/);
+  });
+
+  it('does not consume following prose when table separator is missing', () => {
+    const content = `> [!table] 数据表
+> 注释文字
+
+后续正文不应被表格 callout 吞掉。`;
+    const result = preprocessMarkdown(content, 'bbt');
+    expect(result).toContain('后续正文不应被表格 callout 吞掉。');
+  });
 });

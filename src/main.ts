@@ -1,5 +1,5 @@
 import { Notice, Plugin, TFile } from "obsidian";
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -9,7 +9,7 @@ import { CompareDocModal } from "./compare-modal";
 
 import {
   ZoteroExportSettings,
-  DEFAULT_SETTINGS,
+  createDefaultSettings,
   ZoteroExportSettingTab,
   type CrossrefOptions,
 } from "./settings";
@@ -25,6 +25,43 @@ import {
 /**
  * Parse YAML frontmatter for crossref_lang: zh/en to switch presets.
  */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringSetting(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function mergeCrossref(defaults: CrossrefOptions, value: unknown): CrossrefOptions {
+  const saved = isRecord(value) ? value : {};
+  return {
+    ...defaults,
+    figPrefix: stringSetting(saved.figPrefix, defaults.figPrefix),
+    tblPrefix: stringSetting(saved.tblPrefix, defaults.tblPrefix),
+    eqnPrefix: stringSetting(saved.eqnPrefix, defaults.eqnPrefix),
+    figureTitle: stringSetting(saved.figureTitle, defaults.figureTitle),
+    tableTitle: stringSetting(saved.tableTitle, defaults.tableTitle),
+    equationTitle: stringSetting(saved.equationTitle, defaults.equationTitle),
+    chapDelim: stringSetting(saved.chapDelim, defaults.chapDelim),
+    autoSectionLabels: typeof saved.autoSectionLabels === "boolean"
+      ? saved.autoSectionLabels
+      : defaults.autoSectionLabels,
+    ...(saved.lang === "zh" || saved.lang === "en" ? { lang: saved.lang } : {}),
+  };
+}
+
+function pathsReferToSameFile(first: string, second: string): boolean {
+  const normalize = (value: string) => path.resolve(value).toLowerCase();
+  if (normalize(first) === normalize(second)) return true;
+  if (!fs.existsSync(first) || !fs.existsSync(second)) return false;
+  try {
+    return normalize(fs.realpathSync.native(first)) === normalize(fs.realpathSync.native(second));
+  } catch {
+    return false;
+  }
+}
+
 function parseCrossrefOverrides(content: string, settings: ZoteroExportSettings): Partial<CrossrefOptions> {
   const overrides: Partial<CrossrefOptions> = {};
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -34,9 +71,10 @@ function parseCrossrefOverrides(content: string, settings: ZoteroExportSettings)
     overrides.lang = 'en';
     const en = settings.crossrefEn;
     if (en) {
-      for (const key of ['figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'] as const) {
-        (overrides as any)[key] = (en as any)[key];
-      }
+      const keys: Array<Exclude<keyof CrossrefOptions, "autoSectionLabels" | "lang">> = [
+        'figPrefix', 'tblPrefix', 'eqnPrefix', 'figureTitle', 'tableTitle', 'equationTitle', 'chapDelim'
+      ];
+      for (const key of keys) overrides[key] = en[key];
     }
   } else {
     // Default to Chinese
@@ -46,7 +84,9 @@ function parseCrossrefOverrides(content: string, settings: ZoteroExportSettings)
 }
 
 export default class ZoteroExportPlugin extends Plugin {
-  settings: ZoteroExportSettings = DEFAULT_SETTINGS;
+  settings: ZoteroExportSettings = createDefaultSettings();
+  private saveTimer: number | null = null;
+  private saveQueue: Promise<void> = Promise.resolve();
 
   async onload() {
     await this.loadSettings();
@@ -74,33 +114,56 @@ export default class ZoteroExportPlugin extends Plugin {
   }
 
   onunload() {
+    if (this.saveTimer !== null) window.clearTimeout(this.saveTimer);
     console.log("Zotero Citation Export plugin unloaded");
   }
 
   async loadSettings() {
-    const saved = await this.loadData() || {};
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-    // Deep merge: use default values for any empty/missing crossref fields
-    for (const key of ['crossref', 'crossrefEn'] as const) {
-      const savedSub = saved[key];
-      if (savedSub) {
-        for (const k of Object.keys(DEFAULT_SETTINGS[key])) {
-          const v = savedSub[k];
-          if (v === undefined || v === null || v === '') {
-            this.settings[key][k] = DEFAULT_SETTINGS[key][k];
-          }
-        }
-      }
-    }
-    // Migrate crossrefFilterPath from old crossref object to top-level
-    if (!this.settings.crossrefFilterPath) {
-      const oldPath = (saved.crossref as any)?.crossrefFilterPath || (saved.crossrefEn as any)?.crossrefFilterPath;
-      if (oldPath) this.settings.crossrefFilterPath = oldPath;
-    }
+    const saved = await this.loadData();
+    const defaults = createDefaultSettings();
+    const data = isRecord(saved) ? saved : {};
+    const crossref = mergeCrossref(defaults.crossref, data.crossref);
+    const crossrefEn = mergeCrossref(defaults.crossrefEn, data.crossrefEn);
+    const oldCrossref = isRecord(data.crossref) ? data.crossref.crossrefFilterPath : undefined;
+    const oldCrossrefEn = isRecord(data.crossrefEn) ? data.crossrefEn.crossrefFilterPath : undefined;
+
+    this.settings = {
+      ...defaults,
+      pandocPath: stringSetting(data.pandocPath, defaults.pandocPath),
+      outputDir: stringSetting(data.outputDir, defaults.outputDir),
+      templatePath: stringSetting(data.templatePath, defaults.templatePath),
+      exportMode: data.exportMode === "lite" ? "lite" : "bbt",
+      crossref,
+      crossrefEn,
+      crossrefFilterPath: stringSetting(
+        data.crossrefFilterPath ?? oldCrossref ?? oldCrossrefEn,
+        defaults.crossrefFilterPath
+      ),
+      cslStyleFile: stringSetting(data.cslStyleFile, defaults.cslStyleFile),
+      lastCompareDocx: stringSetting(data.lastCompareDocx, defaults.lastCompareDocx),
+    };
   }
 
   async saveSettings() {
-    await this.saveData(this.settings);
+    if (this.saveTimer !== null) {
+      window.clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    this.saveQueue = this.saveQueue
+      .catch(() => undefined)
+      .then(() => this.saveData(this.settings));
+    await this.saveQueue;
+  }
+
+  scheduleSave() {
+    if (this.saveTimer !== null) window.clearTimeout(this.saveTimer);
+    this.saveTimer = window.setTimeout(() => {
+      this.saveTimer = null;
+      void this.saveSettings().catch((error: unknown) => {
+        console.error("Failed to save settings:", error);
+        new Notice("❌ 设置保存失败");
+      });
+    }, 400);
   }
 
   async exportCurrentNote() {
@@ -136,6 +199,7 @@ export default class ZoteroExportPlugin extends Plugin {
       return null;
     }
 
+    let tempDir: string | undefined;
     try {
       new Notice("⏳ 正在导出...");
 
@@ -154,10 +218,10 @@ export default class ZoteroExportPlugin extends Plugin {
       const crossrefOptions = { ...this.settings.crossref, ...yamlOverrides };
 
       // 4. Write temp files
-      const tmpDir = os.tmpdir();
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wikilink-zotword-"));
       const baseName = path.basename(file.path, ".md");
-      const tmpMd = path.join(tmpDir, `${baseName}_zotero_export.md`).replace(/\\/g, '/');
-      const tmpDocx = path.join(tmpDir, `${baseName}_export.docx`).replace(/\\/g, '/');
+      const tmpMd = path.join(tempDir, `${baseName}_zotero_export.md`).replace(/\\/g, '/');
+      const tmpDocx = path.join(tempDir, `${baseName}_export.docx`).replace(/\\/g, '/');
 
       fs.writeFileSync(tmpMd, preprocessed, "utf-8");
 
@@ -172,16 +236,18 @@ export default class ZoteroExportPlugin extends Plugin {
         crossrefOptions,
         crossrefFilterPath
       );
-      const cmd = `"${this.settings.pandocPath}" ${pandocArgs.map(a => `"${a}"`).join(" ")}`;
-      console.log("Running:", cmd);
+      console.log("Running Pandoc:", this.settings.pandocPath, pandocArgs);
 
       try {
-        execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+        execFileSync(this.settings.pandocPath, pandocArgs, {
+          encoding: "utf-8",
+          stdio: ["pipe", "pipe", "pipe"],
+        });
       } catch (error) {
         const stderr = error.stderr?.toString() || error.message;
         console.error("Pandoc failed:", stderr);
         new Notice(`❌ Pandoc 转换失败\n\n${this.summarizePandocError(stderr)}`);
-        this.cleanup(tmpMd, tmpDocx);
+        this.cleanup(tmpMd, tmpDocx, tempDir);
         return null;
       }
 
@@ -203,12 +269,12 @@ export default class ZoteroExportPlugin extends Plugin {
         } else {
           new Notice(`❌ 写入文件失败: ${error.message}\n${outputPath}`);
         }
-        this.cleanup(tmpMd, tmpDocx);
+        this.cleanup(tmpMd, tmpDocx, tempDir);
         return null;
       }
 
       // 7. Cleanup
-      this.cleanup(tmpMd, tmpDocx);
+      this.cleanup(tmpMd, tmpDocx, tempDir);
 
       const msg = citations.length > 0
         ? `✅ 导出成功（${citations.length} 条引用）\n${outputPath}`
@@ -216,9 +282,11 @@ export default class ZoteroExportPlugin extends Plugin {
       new Notice(msg);
 
       return { outputPath, outputDir, baseName, citationCount: citations.length };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Export failed:", error);
-      new Notice(`❌ 导出失败: ${error.message}`);
+      this.cleanup(tempDir);
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`❌ 导出失败: ${message}`);
       return null;
     }
   }
@@ -245,10 +313,20 @@ export default class ZoteroExportPlugin extends Plugin {
     });
     if (!oldPath) return;
 
+    const baseName = path.basename(file.path, ".md");
+    const vaultBase = (this.app.vault.adapter as any).basePath;
+    const outputDir = this.settings.outputDir
+      || (file.parent?.path ? path.join(vaultBase, file.parent.path) : vaultBase);
+    const plannedOutputPath = path.join(outputDir, `${baseName}.docx`);
+    if (pathsReferToSameFile(oldPath, plannedOutputPath)) {
+      new Notice("❌ 旧版文件不能与本次导出目标相同，请先另存旧版");
+      return;
+    }
+
     const result = await this.runWordExport();
     if (!result) return;
 
-    if (path.resolve(oldPath) === path.resolve(result.outputPath)) {
+    if (pathsReferToSameFile(oldPath, result.outputPath)) {
       new Notice("❌ 选定的旧版与本次导出文件相同，无法比较");
       return;
     }
@@ -351,7 +429,7 @@ export default class ZoteroExportPlugin extends Plugin {
    */
   private checkPandoc(): boolean {
     try {
-      execSync(`"${this.settings.pandocPath}" --version`, {
+      execFileSync(this.settings.pandocPath, ["--version"], {
         encoding: "utf-8",
         timeout: 5000,
         stdio: ["pipe", "pipe", "pipe"],
@@ -407,9 +485,14 @@ export default class ZoteroExportPlugin extends Plugin {
     return lines.slice(-3).join("\n");
   }
 
-  private cleanup(...files: string[]) {
+  private cleanup(...files: Array<string | undefined>) {
     for (const f of files) {
-      try { fs.unlinkSync(f); } catch {}
+      if (!f) continue;
+      try {
+        fs.rmSync(f, { recursive: true, force: true });
+      } catch (error) {
+        console.warn("Cleanup failed:", f, error);
+      }
     }
   }
 

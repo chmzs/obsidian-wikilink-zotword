@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import type ZoteroExportPlugin from "./main";
 
 export type ExportMode = "bbt" | "lite";
+type StringCrossrefKey = Exclude<keyof CrossrefOptions, "autoSectionLabels" | "lang">;
 
 export interface CrossrefOptions {
   figPrefix: string;
@@ -27,35 +28,39 @@ export interface ZoteroExportSettings {
   lastCompareDocx: string;       // 上次用于修订对比的旧版 docx 路径
 }
 
-export const DEFAULT_SETTINGS: ZoteroExportSettings = {
-  pandocPath: "pandoc",
-  outputDir: "",
-  templatePath: "",
-  exportMode: "bbt",
-  crossref: {
-    figPrefix: "图",
-    tblPrefix: "表",
-    eqnPrefix: "式",
-    figureTitle: "图",
-    tableTitle: "表",
-    equationTitle: "式",
-    chapDelim: "-",
-    autoSectionLabels: true,
-  },
-  crossrefEn: {
-    figPrefix: "Fig.",
-    tblPrefix: "Tab.",
-    eqnPrefix: "Eq.",
-    figureTitle: "Figure",
-    tableTitle: "Table",
-    equationTitle: "Equation",
-    chapDelim: ".",
-    autoSectionLabels: true,
-  },
-  crossrefFilterPath: "",
-  cslStyleFile: "apa",
-  lastCompareDocx: "",
-};
+export function createDefaultSettings(): ZoteroExportSettings {
+  return {
+    pandocPath: "pandoc",
+    outputDir: "",
+    templatePath: "",
+    exportMode: "bbt",
+    crossref: {
+      figPrefix: "图",
+      tblPrefix: "表",
+      eqnPrefix: "式",
+      figureTitle: "图",
+      tableTitle: "表",
+      equationTitle: "式",
+      chapDelim: "-",
+      autoSectionLabels: true,
+    },
+    crossrefEn: {
+      figPrefix: "Fig.",
+      tblPrefix: "Tab.",
+      eqnPrefix: "Eq.",
+      figureTitle: "Figure",
+      tableTitle: "Table",
+      equationTitle: "Equation",
+      chapDelim: ".",
+      autoSectionLabels: true,
+    },
+    crossrefFilterPath: "",
+    cslStyleFile: "apa",
+    lastCompareDocx: "",
+  };
+}
+
+export const DEFAULT_SETTINGS = createDefaultSettings();
 
 export class ZoteroExportSettingTab extends PluginSettingTab {
   plugin: ZoteroExportPlugin;
@@ -68,6 +73,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+    containerEl.addClass("wikilink-zotword-settings");
 
     containerEl.createEl("h2", { text: "Wikilink to Zotero Word" });
 
@@ -88,7 +94,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.exportMode)
           .onChange(async (value: string) => {
             this.plugin.settings.exportMode = value as ExportMode;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
             this.display();
           })
       );
@@ -103,7 +109,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.cslStyleFile)
           .onChange(async (value) => {
             this.plugin.settings.cslStyleFile = value;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
 
@@ -116,7 +122,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.outputDir)
           .onChange(async (value) => {
             this.plugin.settings.outputDir = value;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
 
@@ -129,7 +135,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.templatePath)
           .onChange(async (value) => {
             this.plugin.settings.templatePath = value;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
 
@@ -145,7 +151,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.lastCompareDocx)
           .onChange(async (value) => {
             this.plugin.settings.lastCompareDocx = value;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
 
@@ -161,7 +167,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.pandocPath)
           .onChange(async (value) => {
             this.plugin.settings.pandocPath = value;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
 
@@ -177,22 +183,22 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.crossrefFilterPath)
           .onChange(async (value) => {
             this.plugin.settings.crossrefFilterPath = value;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
 
     const xrefContainer = containerEl.createDiv({ cls: "crossref-settings" });
 
-    const grid = xrefContainer.createDiv({ attr: { style: "display:grid;grid-template-columns:1fr 1fr;gap:0 24px;" } });
+    const grid = xrefContainer.createDiv({ cls: "wikilink-zotword-xref-grid" });
 
     // Column 1: Chinese
-    const zhCol = grid.createDiv();
-    zhCol.createEl("h5", { text: "中文" });
+    const zhCol = grid.createDiv({ cls: "wikilink-zotword-xref-column" });
+    zhCol.createEl("h4", { text: "中文" });
     this.xrefColumn(zhCol, this.plugin.settings.crossref, false);
 
     // Column 2: English
-    const enCol = grid.createDiv();
-    enCol.createEl("h5", { text: "English" });
+    const enCol = grid.createDiv({ cls: "wikilink-zotword-xref-column" });
+    enCol.createEl("h4", { text: "English" });
     this.xrefColumn(enCol, this.plugin.settings.crossrefEn, true);
 
     // Shared setting below columns
@@ -207,7 +213,7 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
           .onChange(async (val) => {
             this.plugin.settings.crossref.autoSectionLabels = val;
             this.plugin.settings.crossrefEn.autoSectionLabels = val;
-            await this.plugin.saveSettings();
+            this.plugin.scheduleSave();
           })
       );
   }
@@ -220,8 +226,8 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
     const tTitle = isEnglish ? 'Table' : '表';
     const eTitle = isEnglish ? 'Equation' : '式';
 
-    container.createEl("h6", { text: "— 正文引用前缀 —", attr: { style: "margin:8px 0 4px;color:var(--text-muted);" } });
-    const prefixFields: [string, keyof CrossrefOptions, string][] = [
+    container.createEl("div", { text: "— 正文引用前缀 —", cls: "wikilink-zotword-subheading" });
+    const prefixFields: [string, StringCrossrefKey, string][] = [
       ['Figure prefix', 'figPrefix', f],
       ['Table prefix', 'tblPrefix', t],
       ['Equation prefix', 'eqnPrefix', e],
@@ -232,16 +238,16 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
         .addText((text) => {
           const val = target[key];
           text.setPlaceholder(ph);
-          if (val && val !== ph) text.setValue(val as string);
-          text.onChange(async (v) => {
-            target[key] = v as any;
-            await this.plugin.saveSettings();
+          if (val && val !== ph) text.setValue(val);
+          text.onChange((v) => {
+            target[key] = v;
+            this.plugin.scheduleSave();
           });
         });
     }
 
-    container.createEl("h6", { text: "— 题注标题 —", attr: { style: "margin:12px 0 4px;color:var(--text-muted);" } });
-    const titleFields: [string, keyof CrossrefOptions, string][] = [
+    container.createEl("div", { text: "— 题注标题 —", cls: "wikilink-zotword-subheading" });
+    const titleFields: [string, StringCrossrefKey, string][] = [
       ['Figure title', 'figureTitle', fTitle],
       ['Table title', 'tableTitle', tTitle],
       ['Equation title', 'equationTitle', eTitle],
@@ -252,10 +258,10 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
         .addText((text) => {
           const val = target[key];
           text.setPlaceholder(ph);
-          if (val && val !== ph) text.setValue(val as string);
-          text.onChange(async (v) => {
-            target[key] = v as any;
-            await this.plugin.saveSettings();
+          if (val && val !== ph) text.setValue(val);
+          text.onChange((v) => {
+            target[key] = v;
+            this.plugin.scheduleSave();
           });
         });
     }
@@ -269,9 +275,9 @@ export class ZoteroExportSettingTab extends PluginSettingTab {
         text.setPlaceholder(ph);
         const val = target.chapDelim;
         if (val && val !== ph) text.setValue(val);
-        text.onChange(async (v) => {
+        text.onChange((v) => {
           target.chapDelim = v;
-          await this.plugin.saveSettings();
+          this.plugin.scheduleSave();
         });
       });
   }

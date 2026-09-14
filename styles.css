@@ -1,1 +1,75 @@
-/* Wikilink to Zotero Word - styles */
+/* Wikilink to Zotero Word - scoped settings styles */
+
+.wikilink-zotword-settings .wikilink-zotword-xref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 24px;
+}
+
+.wikilink-zotword-settings .wikilink-zotword-xref-column {
+  min-width: 0;
+}
+
+.wikilink-zotword-settings .wikilink-zotword-xref-column h4 {
+  margin: 12px 0 8px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.wikilink-zotword-settings .wikilink-zotword-subheading {
+  margin: 12px 0 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+}
+
+.wikilink-zotword-settings .setting-item-control {
+  min-width: 0;
+}
+
+.wikilink-zotword-settings .setting-item-control input[type="text"] {
+  min-width: 0;
+  width: min(100%, 320px);
+}
+
+.wikilink-zotword-settings .setting-item {
+  gap: 16px;
+}
+
+.wikilink-zotword-settings .setting-item-info {
+  min-width: 0;
+}
+
+.wikilink-zotword-settings .setting-item-description {
+  overflow-wrap: anywhere;
+}
+
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-row,
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-row {
+  margin: 8px 0;
+}
+
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-status {
+  flex: 0 0 auto;
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+}
+
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-actions {
+  margin-top: 12px;
+}
+
+.wikilink-zotword-compare-modal .wikilink-zotword-compare-spacer {
+  flex: 1 1 auto;
+}

@@ -2,6 +2,15 @@
 
 > 跨会话状态交接点。新记录插最前面。
 
+## 2026-09-14：0.4.0 代码质量修复
+
+- 修复修订对比在检查同路径前覆盖旧版 docx 的数据丢失风险；增加 realpath/case-insensitive 判断
+- 修复导出与 COM 比较临时目录清理、并发脚本覆盖问题；路径校验增加普通文件和 `.docx` 扩展名检查
+- Pandoc 调用改为 `execFileSync` 参数数组，避免 shell 拼接；设置加载改为类型归一化、深度默认值工厂
+- 设置文本保存增加 400ms debounce + 串行保存队列；插件设置/比较弹窗改用 scoped CSS，移除全局 `.modal.mod-settings` 覆盖，窄屏自动单列
+- 交叉引用修复中文图片文件名产生空 label、表格 callout 缺少分隔行时吞正文；新增 2 个回归测试
+- 验证：59/59 tests、`npx tsc --noEmit`、`npm run build` 均通过；Vite 配置仍有既有 warning
+
 ## 2026-09-13：收工
 
 - 教程文档已推送 main（e982808）。因 docs 改动不进 zip，**不需要新 tag/Release**——插件功能版本仍是 v0.4.0

@@ -62,23 +62,32 @@ export async function compareDocxWithWord(
   const outDir = path.dirname(outputPath);
   if (!fs.existsSync(outDir)) throw new Error(`输出目录不存在: ${outDir}`);
 
-  const scriptPath = path.join(os.tmpdir(), "wikilink-zotword-compare.ps1");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wikilink-zotword-compare-"));
+  const scriptPath = path.join(tempDir, "compare.ps1");
   fs.writeFileSync(scriptPath, COMPARE_SCRIPT, "utf8");
 
-  await execFileAsync(
-    "powershell.exe",
-    [
-      "-NoProfile",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-File",
-      scriptPath,
-      oldPath,
-      newPath,
-      outputPath,
-    ],
-    { timeout: timeoutMs, windowsHide: true }
-  );
+  try {
+    await execFileAsync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        scriptPath,
+        oldPath,
+        newPath,
+        outputPath,
+      ],
+      { timeout: timeoutMs, windowsHide: true }
+    );
+  } finally {
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // Cleanup is best effort; preserve the original comparison error.
+    }
+  }
 }
 
 /**

@@ -32,26 +32,18 @@ export class CompareDocModal extends Modal {
       text: `新版将从当前笔记导出：${this.newDocName}。请指定要与之比较的旧版 Word 文档。`,
     });
 
-    const settingRow = this.contentEl.createDiv({
-      attr: { style: "display:flex;gap:8px;align-items:center;margin:8px 0;" },
-    });
-    this.inputEl = settingRow.createEl("input", {
-      type: "text",
-      attr: { style: "flex:1;padding:4px 8px;" },
-    });
+    this.contentEl.addClass("wikilink-zotword-compare-modal");
+    const settingRow = this.contentEl.createDiv({ cls: "wikilink-zotword-compare-row" });
+    this.inputEl = settingRow.createEl("input", { type: "text" });
     this.inputEl.value = this.lastPath;
     this.inputEl.placeholder = "旧版 .docx 完整路径";
 
-    this.statusEl = settingRow.createEl("span", {
-      attr: { style: "font-size:0.85em;white-space:nowrap;" },
-    });
+    this.statusEl = settingRow.createEl("span", { cls: "wikilink-zotword-compare-status" });
     this.updateStatus();
 
     this.inputEl.addEventListener("input", () => this.updateStatus());
 
-    const btnRow = this.contentEl.createDiv({
-      attr: { style: "display:flex;gap:8px;margin-top:12px;" },
-    });
+    const btnRow = this.contentEl.createDiv({ cls: "wikilink-zotword-compare-actions" });
 
     const pickBtn = btnRow.createEl("button", { text: "选择文件…" });
     pickBtn.addEventListener("click", async () => {
@@ -62,7 +54,7 @@ export class CompareDocModal extends Modal {
       }
     });
 
-    btnRow.createEl("span", { attr: { style: "flex:1;" } });
+    btnRow.createEl("span", { cls: "wikilink-zotword-compare-spacer" });
 
     const cancelBtn = btnRow.createEl("button", { text: "取消" });
     cancelBtn.addEventListener("click", () => this.close());
@@ -74,18 +66,25 @@ export class CompareDocModal extends Modal {
     confirmBtn.addEventListener("click", () => this.confirm());
   }
 
+  private validatePath(value: string): string | null {
+    if (!value) return "未选择";
+    try {
+      const stat = fs.statSync(value);
+      if (!stat.isFile()) return "✗ 不是文件";
+      if (!/\.docx$/i.test(value)) return "✗ 请选择 .docx 文件";
+      return "✓ 文件存在";
+    } catch {
+      return "✗ 文件不存在或不可读";
+    }
+  }
+
   private updateStatus() {
     const value = this.inputEl.value.trim();
-    if (!value) {
-      this.statusEl.setText("未选择");
-      this.statusEl.style.color = "var(--text-muted)";
-    } else if (fs.existsSync(value)) {
-      this.statusEl.setText("✓ 文件存在");
-      this.statusEl.style.color = "var(--text-success)";
-    } else {
-      this.statusEl.setText("✗ 文件不存在");
-      this.statusEl.style.color = "var(--text-error)";
-    }
+    const message = this.validatePath(value) ?? "✗ 文件无效";
+    this.statusEl.setText(message);
+    this.statusEl.style.color = message.startsWith("✓")
+      ? "var(--text-success)"
+      : value ? "var(--text-error)" : "var(--text-muted)";
   }
 
   private confirm() {
@@ -94,8 +93,9 @@ export class CompareDocModal extends Modal {
       new Notice("请先指定旧版 Word 文档");
       return;
     }
-    if (!fs.existsSync(value)) {
-      new Notice(`文件不存在:\n${value}`);
+    const validation = this.validatePath(value);
+    if (validation !== "✓ 文件存在") {
+      new Notice(`${validation}\n${value}`);
       return;
     }
     this.submitted = true;

@@ -310,6 +310,16 @@ function decodeFileUri(url: string): string {
   }
 }
 
+function imageLabel(file: string): string {
+  const basename = path.basename(file, path.extname(file));
+  const label = basename.replace(/\s+/g, '-').replace(/[^A-Za-z0-9-]/g, '');
+  if (label) return label;
+
+  let hash = 0;
+  for (const char of basename) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  return `image-${Math.abs(hash)}`;
+}
+
 /**
  * Shared markdown transformations used by both preprocessMarkdown and cleanMarkdown.
  * Handles: YAML frontmatter removal, image embeds, figure/table callouts,
@@ -344,9 +354,7 @@ export function applyMarkdownTransformations(
     if (isSize) {
       return footnotesMode ? '![](' + file + ')' : '![](' + file + '){ width=' + param.trim() + ' }';
     }
-    const figLabel = path.basename(file, path.extname(file))
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '');
+    const figLabel = imageLabel(file);
     return '![' + param.trim() + '](' + file + '){#fig:' + figLabel + '}';
   });
 
@@ -366,9 +374,7 @@ export function applyMarkdownTransformations(
   // Pattern: ![caption](file) -> ![caption](file){#fig:xxx} (add fig label if caption is not empty)
   result = result.replace(/!\[([^\]]+?)\]\(([^)]+)\)(?!\{)/g, (_match, caption, file) => {
     if (caption && !caption.startsWith(' ')) {
-      const figLabel = path.basename(file, path.extname(file))
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]/g, '');
+      const figLabel = imageLabel(file);
       return '![' + caption + '](' + file + '){#fig:' + figLabel + '}';
     }
     return _match;
@@ -454,7 +460,8 @@ export function applyMarkdownTransformations(
       i++;
 
       const annotationLines: string[] = [];
-      while (i < lines.length && lines[i].trim() !== '>' && !lines[i].match(/^>\s*\|/)) {
+      while (i < lines.length && /^>/.test(lines[i]) && !/^>\s*\|/.test(lines[i])) {
+        if (lines[i].trim() === '>') break;
         const lineContent = lines[i].replace(/^>\s?/, '').trim();
         if (lineContent) annotationLines.push(lineContent);
         i++;
