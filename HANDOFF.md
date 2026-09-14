@@ -2,6 +2,13 @@
 
 > 跨会话状态交接点。新记录插最前面。
 
+## 2026-09-14：v0.4.1 已发布
+
+- 版本号同步：`manifest.json`、`package.json`、`versions.json` → 0.4.1
+- 提交：`b8f4704`；标签：`v0.4.1`；GitHub Actions test/build/release 全部通过
+- Release：https://github.com/chmzs/obsidian-wikilink-zotword/releases/tag/v0.4.1
+- 附件：`wikilink-zotword.zip`（已上传）；main 已推送 origin
+
 ## 2026-09-14：0.4.0 代码质量修复
 
 - 修复修订对比在检查同路径前覆盖旧版 docx 的数据丢失风险；增加 realpath/case-insensitive 判断
